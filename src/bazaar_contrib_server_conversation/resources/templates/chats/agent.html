@@ -1,0 +1,33 @@
+{% extends "server/base.html" %}
+{% import "chats/macros.html" as m with context %}
+{% set short = ref(agent.id) %}
+{% block title %}{{ t.text("chats.title") }}{% endblock %}
+{% block top %}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('chats.css') }}"><script src="{{ asset('chats.js') }}"></script>{% endblock %}
+{% block body %}
+{# an agent's conversations on its page, newest first, those waiting for a decision under their own tab and beside them with what the agent says to them meanwhile; a row opens on the conversations page #}
+<div id="agent-chats" class="cols" data-topic="chats.list" data-scope='{{ {"agent": short | string} | tojson }}' data-seen='{{ seen | tojson }}' hx-get="/ui/chats/agent/{{ short }}{{ '?tab=contacts' if tab == 'contacts' else '' }}" hx-select="#agent-chats" hx-target="#agent-chats" hx-swap="outerHTML" hx-trigger="bazaar:change, chats:reviewed from:body">
+  <div class="card clist">
+    <div class="sub-tabs">
+      <a class="tab{% if tab == 'chats' %} on{% endif %}" href="/ui/chats/agent/{{ short }}">{{ t.text("chats.tab.chats") }} <span class="n">{{ total }}</span></a>
+      <a class="tab{% if tab == 'contacts' %} on{% endif %}" href="/ui/chats/agent/{{ short }}?tab=contacts">{{ t.text("chats.tab.contacts") }}{% if waiting %} <span class="badge">{{ waiting }}</span>{% endif %}</a>
+    </div>
+    {{ m.away(away, computers) }}
+    <div class="crows">{% include "chats/agent_rows.html" %}</div>
+  </div>
+  <div class="stack">
+    <div class="card">
+      <div class="card-hd"><h3>{{ t.text("chats.tab.contacts") }}</h3>{% if waiting %}<span class="count-pill">{{ waiting }}</span>{% endif %}</div>
+      <div class="attn">
+        {% set approvable = [agent.id] if approve else [] %}
+        {% for conversation in pending %}
+        {% set row = {"agent": agent, "conversation": conversation} %}
+        {% include "chats/asked.html" %}
+        {% else %}<p class="none">{{ t.text("chats.none.contacts") }}</p>{% endfor %}
+      </div>
+    </div>
+    {% set failed = false %}{% set named = false %}
+    {% include "chats/reply.html" %}
+  </div>
+</div>
+{% endblock %}

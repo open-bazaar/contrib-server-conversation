@@ -1,0 +1,19 @@
+{# a first contact waiting for a decision: who wants what of which agent, through where, the first message whole, and the decision; until it is let in, the agent sends only what it is set to, or nothing #}
+{% set first = opened.history.messages[0] if opened.history.messages else none %}
+{% set who = m.named(conversation) | trim %}
+<div class="card review">
+  <span class="status pend">{{ m.icon("clock") }}{{ t.text("chats.pending") }}</span>
+  <h2>{{ t.text("chats.first.contact") }}</h2>
+  <p class="wants">{{ t.text("chats.wants." ~ conversation.kind, {"who": "<b>%s</b>" | format(who | e), "agent": "<b>%s</b>" | format(agent.name | e)}) | safe }}</p>
+  <div class="meta">{{ m.logo(conversation.channel) }}<span>{% if conversation.handle %}@{{ conversation.handle }}{% else %}{{ t.text("chats.members", {"n": conversation.member_count}) }}{% endif %}</span>{% if first %}<span class="sep">·</span><span>{{ t.text("chats.first.at", {"when": first.at_ms | ago}) }}</span>{% endif %}</div>
+  {% if first %}{% set from = m.who(first.sender) | trim %}<div class="quote"><div class="av xs {{ from | tint }}">{{ from[:1] | upper }}</div><div class="said">{{ first.body }}</div></div>{% endif %}
+  {% if opened.approve %}
+  <form class="acts" hx-post="/ui/chats/{{ address }}/review{{ '?' ~ kept if kept else '' }}" hx-target="find .outcome" hx-swap="innerHTML">
+    <input type="hidden" name="on" value="page">
+    <button class="btn primary" type="submit" name="decision" value="approved"{% if not agent.online %} disabled{% endif %}>{{ m.icon("check") }}{{ t.text("chats.approve") }}</button>
+    <button class="btn" type="submit" name="decision" value="denied"{% if not agent.online %} disabled{% endif %}>{{ m.icon("x") }}{{ t.text("chats.deny") }}</button>
+    <span class="outcome" role="status">{% if not agent.online %}{{ t.text("chats.offline") }}{% endif %}</span>
+  </form>
+  {% endif %}
+  <div class="note">{{ m.icon("message-circle") }}<span>{{ t.text("chats.until." ~ ("reply" if opened.reply else "silent"), {"agent": agent.name, "who": who}) }}</span></div>
+</div>

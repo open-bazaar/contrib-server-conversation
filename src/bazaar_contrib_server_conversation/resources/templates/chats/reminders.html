@@ -1,0 +1,17 @@
+{% extends "server/base.html" %}
+{% import "chats/macros.html" as m with context %}
+{% set short = ref(agent.id) %}
+{% block title %}{{ t.text("chats.reminders") }}{% endblock %}
+{% block top %}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('chats.css') }}">{% endblock %}
+{% block body %}
+{# the agent's reminders still to fire, the soonest first: when, and what in which conversation, a group by its name and a private one as who it is with #}
+<div id="reminders" class="card remcard" data-topic="chats.list" data-scope='{{ {"agent": short | string} | tojson }}' data-seen='{{ seen | tojson }}' hx-get="/ui/chats/reminders/{{ short }}" hx-select="#reminders" hx-target="#reminders" hx-swap="outerHTML" hx-trigger="bazaar:change">
+  <div class="card-hd"><h3>{{ t.text("chats.reminders") }}</h3><span class="sub">{{ t.text("chats.reminders.waiting", {"n": reminders | length}) }}</span></div>
+  {% for reminder in reminders %}
+  <div class="rem"><div class="ic">{{ m.icon("alarm-clock") }}</div><div><div class="when">{{ m.when(reminder) }}</div><div class="what">{{ reminder.title }}{% if reminder.conversation %} · {{ reminder.conversation if reminder.kind == "group" else t.text("chats.dm", {"name": reminder.conversation}) }}{% endif %}</div></div></div>
+  {% else %}
+  <p class="none">{{ t.text("chats.reminders.none") }}</p>
+  {% endfor %}
+</div>
+{% endblock %}

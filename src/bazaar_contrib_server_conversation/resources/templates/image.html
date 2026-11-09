@@ -1,0 +1,2 @@
+{# a picture written in Markdown comes through the server, so where it lives sees the server come for it and not who is looking; one not on the web is its words alone #}
+{% set address = proxied(src) %}{% if address %}<img class="md-img" src="{{ address }}" alt="{{ alt }}" title="{{ src }}" loading="lazy">{% else %}{{ alt or t.text("chats.image") }}{% endif %}

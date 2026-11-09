@@ -1,0 +1,17 @@
+{# before the agent stops replying in a conversation: what that means, asked beside the row on a wide screen and from the bottom on a phone #}
+{% set conversation = detail.conversation %}
+<div class="revoking" x-data @keydown.escape.window="$el.remove()">
+  <div class="scrim" @click="$el.parentElement.remove()"></div>
+  <div class="pop" role="alertdialog" aria-labelledby="revoke-title">
+    <span class="grab"></span>
+    <b id="revoke-title">{{ t.text("chats.revoke.title", {"name": conversation.name or conversation.handle or ""}) }}</b>
+    <p>{{ t.text("chats.revoke.hint." ~ conversation.kind, {"agent": agent.name}) }}</p>
+    <form class="row" hx-post="/ui/chats/{{ ref(agent.id) }}/{{ ref(conversation.thread_id) }}/review{{ '?' ~ kept if kept else '' }}" hx-target="find .outcome" hx-swap="innerHTML">
+      <input type="hidden" name="decision" value="denied">
+      <input type="hidden" name="on" value="page">
+      <span class="outcome" role="status"></span>
+      <button class="btn sm" type="button" @click="$el.closest('.revoking').remove()">{{ t.text("chats.cancel") }}</button>
+      <button class="btn sm danger" type="submit">{{ t.text("chats.revoke.confirm") }}</button>
+    </form>
+  </div>
+</div>

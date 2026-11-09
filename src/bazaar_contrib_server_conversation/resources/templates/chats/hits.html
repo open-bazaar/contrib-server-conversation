@@ -1,0 +1,15 @@
+{% import "chats/macros.html" as m with context %}
+{# what the search found: the conversation and its agent, who said it, the words met marked, and when #}
+{% for agent, hit in hits %}
+{% set address = ref(agent.id) ~ "/" ~ ref(hit.thread_id) %}
+{% set query = (kept ~ "&" if kept else "") ~ "around=" ~ (hit.message_id | urlencode) %}
+<a class="conv" href="/ui/chats/{{ address }}?{{ query }}" data-panes="/ui/chats/{{ address }}/panes?{{ query }}">
+  {{ m.face({"kind": hit.kind, "name": hit.conversation, "handle": none, "channel": hit.channel}, "gav") }}
+  <div class="tx"><div class="tt"><span class="tn">{{ hit.conversation or t.text("chats.kind." ~ hit.kind) }}</span> {{ m.agent(agent) }}</div>
+  <div class="sn">{{ m.who(hit.sender) }}{{ t.text("chats.colon") }}{% for text, matched in hit.parts %}{% if matched %}<mark>{{ text }}</mark>{% else %}{{ text }}{% endif %}{% endfor %}</div></div>
+  <span class="tm">{{ hit.at_ms | stamp }}</span>
+</a>
+{% else %}
+<p class="none">{{ t.text("chats.search.none") }}</p>
+{% endfor %}
+{% if onward %}<div class="more-rows" hx-get="/ui/chats/hits?{{ kept ~ '&' if kept else '' }}{{ onward }}" hx-trigger="intersect once" hx-swap="outerHTML"></div>{% endif %}
