@@ -259,10 +259,10 @@ class Reader:
                 upto=max(latest, cursor),
                 at_ms=now_ms(),
             )
-        except RemoteError, TimeoutError, ValidationError:
+        except (RemoteError, TimeoutError, ValidationError) as error:
             # a node that does not answer, or answers otherwise, keeps what
             # it said before
-            logging.getLogger(__name__).info("conversations.unanswered", exc_info=True)
+            logging.getLogger(__name__).info("conversations.unanswered: %r", error)
         finally:
             del self._asking[agent.id]
 
