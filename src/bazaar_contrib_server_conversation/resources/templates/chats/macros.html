@@ -1,0 +1,62 @@
+{% macro icon(name) %}{% include "chats/icons/" ~ name ~ ".svg" %}{% endmacro %}
+
+{# a channel's logo, standing for its name; a puzzle piece for a kind without one #}
+{% macro logo(kind) %}<span class="g {{ kind }}">{% include ["chats/logos/" ~ kind ~ ".svg", "chats/icons/puzzle.svg"] %}</span>{% endmacro %}
+
+{# a channel by its name, the kind itself for one without #}
+{% macro channel(kind) %}{{ t.text("chats.channel." ~ kind) if t.has("chats.channel." ~ kind) else kind }}{% endmacro %}
+
+{# who sent something, by the name it shows #}
+{% macro who(sender) %}{{ (sender.display_name or sender.name or sender.id) if sender else t.text("chats.someone") }}{% endmacro %}
+
+{# what a conversation is called: a group by its name, a private one by who it is with #}
+{% macro named(conversation) %}{{ conversation.name or conversation.handle or t.text("chats.kind." ~ conversation.kind) }}{% endmacro %}
+
+{# a conversation's face: a group's icon or the first letter of who it is with, the channel's logo on its corner #}
+{% macro face(conversation, cls="cav") -%}
+{% if conversation.kind == "group" %}<div class="{{ cls }} grp">{{ icon("users") }}{{ logo(conversation.channel) }}</div>
+{%- else %}{% set name = named(conversation) | trim %}<div class="{{ cls }} av {{ name | tint }}">{{ name[:1] | upper }}{{ logo(conversation.channel) }}</div>{% endif %}
+{%- endmacro %}
+
+{# an agent's lantern: at work, idle, failed, or away with its computer #}
+{% macro lantern(agent) -%}
+<span class="lantern {% if not agent.online %}off{% elif agent.activity is none %}on{% elif agent.activity.state in ('failed', 'blocked') %}fail{% elif agent.activity.working %}work{% else %}on{% endif %}"></span>
+{%- endmacro %}
+
+{# the agent a conversation is with, by its lantern and name #}
+{% macro agent(agent) %}<span class="ag">{{ lantern(agent) }}{{ agent.name }}</span>{% endmacro %}
+
+{# what was said last: who said it and the beginning of it #}
+{% macro said(preview) %}{% if preview %}{{ t.text("chats.said", {"who": who(preview.sender) | trim, "text": preview.text}) }}{% endif %}{% endmacro %}
+
+{# a turn's calls in a receipt's words, kinds never called left out, and how long it took #}
+{% macro receipt(found) -%}
+{% set said = [] %}
+{% for kind in ("commands", "files", "changes", "pages", "searches", "tools", "tasks") %}
+{% set n = found.calls[kind] %}
+{% if n %}{% set _ = said.append(t.text("chats.calls." ~ kind, {"n": n})) %}{% endif %}
+{% endfor %}
+{% set _ = said.append(t.text("chats.calls.seconds", {"n": found.seconds})) %}
+{{- said | join(" · ") | safe -}}
+{%- endmacro %}
+
+{# when a reminder fires: its rule for one that repeats, its day and time otherwise #}
+{% macro when(reminder) -%}
+{% if reminder.repeat_rule %}{% set rule = reminder.repeat_rule | repeat %}
+{%- if rule.kind == "weekly" %}{% set days = [] %}{% for one in rule.days %}{% set _ = days.append(t.text("chats.weekday." ~ one)) %}{% endfor %}{{ t.text("chats.repeat.weekly", {"days": days | join(t.text("chats.repeat.and")), "time": rule.time}) }}
+{%- else %}{{ t.text("chats.repeat." ~ rule.kind, rule) }}{% endif %}
+{%- else %}{{ reminder.next_fire_at_ms | moment }}{% endif %}
+{%- endmacro %}
+
+{# why the conversations of some agents are not there for now, a line for each computer #}
+{% macro away(away, computers) %}
+{% if away %}
+<div class="notice">
+  {% for computer_id, missing in away | groupby("agent.computer_id") %}
+  {% set reason = missing[0] %}
+  {% set names = missing | map(attribute="agent.name") | join(t.text("chats.and")) %}
+  <p class="{{ reason.reason }}">{% if reason.reason == "enabling" %}<span class="spin"></span>{% else %}{{ icon("triangle-alert") }}{% endif %}<span>{{ t.text("chats.away." ~ reason.reason, {"computer": computers.get(computer_id, "—"), "agents": names, "error": reason.error or ""}) }}</span></p>
+  {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}

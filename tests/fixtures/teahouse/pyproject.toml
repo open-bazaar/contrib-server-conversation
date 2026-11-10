@@ -1,0 +1,19 @@
+[project]
+name = "teahouse"
+version = "0.1.0"
+description = "A channel and a runtime for an agent to hold conversations on a real node in server-conversation's tests"
+requires-python = ">=3.15"
+dependencies = [
+    "bazaar-contrib-audit~=0.3.0rc20",
+    "bazaar-contrib-channel~=0.3.0rc24",
+    "bazaar-contrib-harness~=0.3.0rc24",
+    "pydantic>=2.12.0",
+]
+
+[project.entry-points."bazaar_compute_node.contribs"]
+teahouse-channel-builder = "teahouse:channel_builder"
+teahouse-runtime-builder = "teahouse:runtime_builder"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"

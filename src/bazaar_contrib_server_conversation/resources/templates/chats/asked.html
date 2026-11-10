@@ -1,0 +1,16 @@
+{# a first contact as a line to act on: who wants what of which agent through where, the first message or how many are in the group, and the decision #}
+{% set conversation = row.conversation %}
+{% set who = m.named(conversation) | trim %}
+<div class="attn-item">
+  <div class="ic req">{{ m.icon("users" if conversation.kind == "group" else "user-plus") }}</div>
+  <div class="tx"><a href="/chats/{{ ref(row.agent.id) }}/{{ ref(conversation.thread_id) }}?tab=contacts" target="_top">{{ t.text("chats.wants." ~ conversation.kind, {"who": "<b>%s</b>" | format(who | e), "agent": "<b>%s</b>" | format(row.agent.name | e)}) | safe }}</a> {{ m.logo(conversation.channel) }}
+    <div class="q">{% if conversation.kind == "group" %}{{ t.text("chats.members", {"n": conversation.member_count}) }}{% if conversation.first %} · {{ t.text("chats.first.at", {"when": conversation.first.at_ms | ago}) }}{% endif %}{% elif conversation.first %}{{ t.text("chats.quoted", {"text": conversation.first.text}) }}{% endif %}</div>
+    {% if row.agent.id in approvable %}
+    <form class="acts" hx-post="/ui/chats/{{ ref(row.agent.id) }}/{{ ref(conversation.thread_id) }}/review" hx-target="find .outcome" hx-swap="innerHTML">
+      <button class="btn sm ok" type="submit" name="decision" value="approved"{% if not row.agent.online %} disabled{% endif %}>{{ m.icon("check") }}{{ t.text("chats.approve") }}</button>
+      <button class="btn sm no" type="submit" name="decision" value="denied"{% if not row.agent.online %} disabled{% endif %}>{{ m.icon("x") }}{{ t.text("chats.deny") }}</button>
+      <span class="outcome" role="status"></span>
+    </form>
+    {% endif %}
+  </div>
+</div>

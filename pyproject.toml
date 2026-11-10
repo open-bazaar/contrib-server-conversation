@@ -1,0 +1,76 @@
+[project]
+name = "bazaar-contrib-server-conversation"
+version = "0.3.0rc1"
+description = "The conversations of the Bazaar Compute server: every agent's conversations on its computers, their messages, first contacts let in or turned away, and searching them"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.15"
+dependencies = [
+    "aiohttp>=3.12.0",
+    "bazaar-core~=0.3.0rc1",
+    "bazaar-contrib-sidecar~=0.3.0rc1",
+    "bazaar-contrib-timer~=0.3.0rc1",
+    "bazaar-contrib-server~=0.3.0rc7",
+    "bazaar-contrib-server-access~=0.3.0rc6",
+    "bazaar-contrib-server-activity~=0.3.0rc2",
+    "bazaar-contrib-server-agent~=0.3.0rc4",
+    "bazaar-contrib-server-computer~=0.3.0rc5",
+    "bazaar-contrib-server-overview~=0.3.0rc3",
+    "jinja2>=3.1.6",
+    "pydantic>=2.12.0",
+    "python-multipart>=0.0.32",
+    "starlette>=0.48.0",
+]
+
+[project.entry-points."bazaar_compute_node.contribs"]
+server-conversation = "bazaar_contrib_server_conversation:conversation"
+
+[project.urls]
+Repository = "https://github.com/open-bazaar/contrib-server-conversation"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:anyio"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.pyright]
+include = ["src", "tests", "scripts"]
+pythonVersion = "3.15"
+pythonPlatform = "All"
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "basic"
+reportMatchNotExhaustive = "error"
+reportUnreachable = "warning"
+reportUnusedFunction = "warning"
+reportUnusedVariable = "warning"
+
+[tool.ruff.lint]
+extend-select = ["ASYNC"]
+
+[tool.uv.sources]
+teahouse = { path = "tests/fixtures/teahouse", editable = true }
+
+[dependency-groups]
+dev = [
+    "bazaar-compute[node]~=0.3.0rc25",
+    "bazaar-contrib-sqlite~=0.3.0rc1",
+    "bazaar-contrib-starlink~=0.3.0rc2",
+    "bazaar-contrib-starlink-conversation~=0.3.0rc2",
+    "bazaar-contrib-timer-wheel~=0.3.0rc1",
+    "blockbuster>=1.5.29,<1.6",
+    "httpx>=0.28.0,<1",
+    "playwright>=1.55.0",
+    "pyright==1.1.414",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.9.0",
+    "teahouse",
+    "tomli-w>=1.2.0",
+]

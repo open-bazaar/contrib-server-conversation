@@ -1,0 +1,63 @@
+{% extends "server/base.html" %}
+{% import "chats/macros.html" as m with context %}
+{% set searching = "q" in request.query_params %}
+{% block title %}{{ m.named(opened.detail.conversation) if opened else t.text("chats.title") }}{% endblock %}
+{% block root %} class="filled"{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('chats.css') }}"><script src="{{ asset('chats.js') }}"></script>{% endblock %}
+{% block top %}
+<header class="top">
+  {# a wide screen: the title, which agents, and the search through their messages #}
+  <h1 class="on-wide">{{ t.text("chats.title") }}</h1>
+  {% set picked = agents | selectattr("id", "in", scoped | map(attribute="id") | list) | list %}
+  <label class="btn sm picker on-wide">{{ m.icon("bot") }}<span>{{ picked[0].name if chosen and picked else t.text("chats.agents.all") }}</span><select name="agent" form="filter" aria-label="{{ t.text('chats.agents') }}">
+    <option value="">{{ t.text("chats.agents.all") }}</option>
+    {% for agent in agents %}<option value="{{ ref(agent.id) }}"{% if ref(agent.id) | string == chosen %} selected{% endif %}>{{ agent.name }}</option>{% endfor %}
+  </select>{{ m.icon("chevron-down") }}</label>
+  <div class="actions on-wide">
+    <form class="input finder{% if searching %} focus{% endif %}" action="/ui/chats/" method="get" role="search">
+      {{ m.icon("search") }}
+      {% if chosen %}<input type="hidden" name="agent" value="{{ chosen }}">{% endif %}
+      <input type="hidden" name="in" value="{{ request.query_params.get('in', '') if searching else '' }}" data-within>
+      <input type="search" name="q" value="{{ query }}" placeholder="{{ t.text('chats.search') }}" autocomplete="off" aria-label="{{ t.text('chats.search') }}">
+      {% if searching %}<a class="suffix" href="/ui/chats/{{ '?agent=' ~ chosen if chosen else '' }}" aria-label="{{ t.text('chats.search.clear') }}">{{ m.icon("x") }}</a>{% endif %}
+    </form>
+  </div>
+  {# a phone: the bar of the layer it shows #}
+  {% if layer == "list" and not searching %}
+  <div class="bar on-narrow"><h1>{{ t.text("chats.title") }}</h1><a class="icon-btn" href="/ui/chats/?q={{ '&agent=' ~ chosen if chosen else '' }}" aria-label="{{ t.text('chats.search') }}">{{ m.icon("search") }}</a></div>
+  {% elif layer == "list" %}
+  <form class="bar on-narrow" action="/ui/chats/" method="get" role="search">
+    <a class="back" href="/ui/chats/{{ '?agent=' ~ chosen if chosen else '' }}" aria-label="{{ t.text('server.back') }}">{{ m.icon("chevron-left") }}</a>
+    {% if chosen %}<input type="hidden" name="agent" value="{{ chosen }}">{% endif %}
+    {% if request.query_params.get("in") %}<input type="hidden" name="in" value="{{ request.query_params.get('in') }}">{% endif %}
+    <label class="input focus">{{ m.icon("search") }}<input type="search" name="q" value="{{ query }}" placeholder="{{ t.text('chats.search') }}" autocomplete="off" aria-label="{{ t.text('chats.search') }}"{% if not query %} autofocus{% endif %}></label>
+  </form>
+  {% elif opened and layer == "info" %}
+  <div class="bar on-narrow"><a class="back" href="/ui/chats/{{ ref(opened.agent.id) }}/{{ ref(opened.detail.conversation.thread_id) }}{{ '?' ~ kept if kept else '' }}" aria-label="{{ t.text('server.back') }}">{{ m.icon("chevron-left") }}</a><h1>{{ t.text("chats.info") }}</h1></div>
+  {% elif opened and opened.detail.conversation.review == "pending" %}
+  <div class="bar on-narrow"><a class="back" href="/ui/chats/?{{ kept or 'tab=contacts' }}" aria-label="{{ t.text('server.back') }}">{{ m.icon("chevron-left") }}</a><h1>{{ m.named(opened.detail.conversation) }}</h1></div>
+  {% elif opened %}
+  {% set conversation = opened.detail.conversation %}
+  <div class="bar on-narrow thread-bar">
+    <a class="back" href="/ui/chats/{{ '?' ~ kept if kept else '' }}" aria-label="{{ t.text('server.back') }}">{{ m.icon("chevron-left") }}</a>
+    {{ m.face(conversation) }}
+    <div class="ct"><b>{{ m.named(conversation) }}</b><small>{% if conversation.kind == "group" %}{{ t.text("chats.members", {"n": conversation.member_count}) }} · {% endif %}{{ t.text("chats.replies", {"agent": opened.agent.name}) }}</small></div>
+    <a class="icon-btn" href="/ui/chats/{{ ref(opened.agent.id) }}/{{ ref(conversation.thread_id) }}/info{{ '?' ~ kept if kept else '' }}" aria-label="{{ t.text('chats.info') }}">{{ m.icon("ellipsis") }}</a>
+  </div>
+  {% else %}
+  <div class="bar on-narrow"><a class="back" href="/ui/chats/" aria-label="{{ t.text('server.back') }}">{{ m.icon("chevron-left") }}</a><h1>{{ t.text("chats.title") }}</h1></div>
+  {% endif %}
+</header>
+{% endblock %}
+{% block body %}
+<form id="filter" action="/ui/chats/" method="get" hidden>{% if request.query_params.get("tab") %}<input type="hidden" name="tab" value="{{ request.query_params.get('tab') }}">{% endif %}{% if searching %}{% for name in ("q", "when", "sort") if request.query_params.get(name) is not none %}<input type="hidden" name="{{ name }}" value="{{ request.query_params.get(name) }}">{% endfor %}{% endif %}</form>
+<section class="content chats" data-layer="{{ layer }}">
+  <div class="panes">
+    <div class="pane list">{% include "chats/list.html" %}</div>
+    <div id="opened" class="opened">
+      {% if opened %}{% include "chats/opened.html" %}
+      {% elif layer != "list" %}<p class="gone">{{ t.text("chats.unavailable") }}</p>{% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

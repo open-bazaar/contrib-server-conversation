@@ -1,0 +1,42 @@
+{# the list's pane: the conversations let in or waiting, or what the search found; it follows the newest message of the agents it shows, and why some are not there #}
+<span hidden data-topic="chats.list" data-scope='{{ {"agent": chosen} | tojson }}' data-seen='{{ seen | tojson }}' hx-get="/ui/chats/{{ '?' ~ kept if kept else '' }}" hx-select=".pane.list > *" hx-target="closest .pane" hx-swap="innerHTML" hx-trigger="bazaar:change"></span>
+{% if "q" in request.query_params %}
+<div class="sr-hd">
+  <form class="filters" action="/ui/chats/" method="get">
+    <input type="hidden" name="q" value="{{ query }}">
+    {% if chosen %}<input type="hidden" name="agent" value="{{ chosen }}">{% endif %}
+    {% set kept_in = [] %}{% for row in threads %}{% if ref(row.agent.id) ~ "." ~ ref(row.conversation.thread_id) == within %}{% set _ = kept_in.append(row) %}{% endif %}{% endfor %}
+    <label class="btn sm picker"><span>{{ m.named(kept_in[0].conversation) if kept_in else t.text("chats.search.in") }}</span><select name="in" onchange="this.form.requestSubmit()" aria-label="{{ t.text('chats.search.in') }}">
+      <option value="">{{ t.text("chats.search.any") }}</option>
+      {% for row in threads %}{% set value = ref(row.agent.id) ~ "." ~ ref(row.conversation.thread_id) %}<option value="{{ value }}"{% if value == within %} selected{% endif %}>{{ m.named(row.conversation) }} · {{ row.agent.name }}</option>{% endfor %}
+    </select>{{ m.icon("chevron-down") }}</label>
+    {% set kept_from = members | selectattr("0", "equalto", sender) | list %}
+    <label class="btn sm picker"><span>{{ (kept_from[0][1] or t.text("chats.search.self")) if sender and kept_from else t.text("chats.search.from") }}</span><select name="from" onchange="this.form.requestSubmit()" aria-label="{{ t.text('chats.search.from') }}">
+      <option value="">{{ t.text("chats.search.any") }}</option>
+      {% for value, label in members %}<option value="{{ value }}"{% if value == sender %} selected{% endif %}>{{ label or t.text("chats.search.self") }}</option>{% endfor %}
+    </select>{{ m.icon("chevron-down") }}</label>
+    <label class="btn sm picker"><span>{{ t.text("chats.search.when." ~ when) if when else t.text("chats.search.when") }}</span><select name="when" onchange="this.form.requestSubmit()" aria-label="{{ t.text('chats.search.when') }}">
+      <option value="">{{ t.text("chats.search.when.any") }}</option>
+      {% for one in ("today", "week", "month") %}<option value="{{ one }}"{% if one == when %} selected{% endif %}>{{ t.text("chats.search.when." ~ one) }}</option>{% endfor %}
+    </select>{{ m.icon("chevron-down") }}</label>
+    <div class="count"><span>{{ t.text("chats.search.found", {"n": found}) | safe }}</span><label class="btn sm ghost picker"><span>{{ t.text("chats.search.sort." ~ sort) }}</span><select name="sort" onchange="this.form.requestSubmit()" aria-label="{{ t.text('chats.search.sort') }}">
+      {% for one in ("relevance", "time") %}<option value="{{ one }}"{% if one == sort %} selected{% endif %}>{{ t.text("chats.search.sort." ~ one) }}</option>{% endfor %}
+    </select>{{ m.icon("chevron-down") }}</label></div>
+  </form>
+</div>
+{{ m.away(away, computers) }}
+<div class="convs hits">{% include "chats/hits.html" %}</div>
+{% else %}
+<div class="list-tabs">
+  <a class="tab{% if tab == 'chats' %} on{% endif %}" href="/ui/chats/{{ '?agent=' ~ chosen if chosen else '' }}">{{ t.text("chats.tab.chats") }} <span class="n">{{ total }}</span></a>
+  <a class="tab{% if tab == 'contacts' %} on{% endif %}" href="/ui/chats/?tab=contacts{{ '&agent=' ~ chosen if chosen else '' }}">{{ t.text("chats.tab.contacts") }}{% if pending %} <span class="badge">{{ pending }}</span>{% endif %}</a>
+  {% set picked = scoped if chosen else [] %}
+  <label class="agsel on-narrow">{{ m.icon("bot") }}<span>{{ picked[0].name if picked else t.text("chats.agents.all") }}</span><select name="agent" form="filter" aria-label="{{ t.text('chats.agents') }}">
+    <option value="">{{ t.text("chats.agents.all") }}</option>
+    {% for agent in agents %}<option value="{{ ref(agent.id) }}"{% if ref(agent.id) | string == chosen %} selected{% endif %}>{{ agent.name }}</option>{% endfor %}
+  </select>{{ m.icon("chevron-down") }}</label>
+</div>
+{{ m.away(away, computers) }}
+<div class="convs">{% include "chats/rows.html" %}</div>
+{% if tab == "contacts" %}<p class="hint">{{ t.text("chats.contacts.hint") }}</p>{% endif %}
+{% endif %}

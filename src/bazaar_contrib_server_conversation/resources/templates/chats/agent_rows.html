@@ -1,0 +1,15 @@
+{% import "chats/macros.html" as m with context %}
+{# a row a conversation: who with and what kind, what was said last and when, and how many the agent has yet to read #}
+{% for row in rows %}
+{% set conversation = row.conversation %}
+<a class="crow" href="/chats/{{ ref(agent.id) }}/{{ ref(conversation.thread_id) }}{{ '?tab=contacts' if tab == 'contacts' else '' }}" target="_top">
+  {{ m.face(conversation) }}
+  <div class="nm"><b>{{ m.named(conversation) }}</b><small>{{ t.text("chats.kind." ~ conversation.kind) }}{% if conversation.kind == "group" %} · {{ t.text("chats.members", {"n": conversation.member_count}) }}{% endif %}</small></div>
+  <div class="last">{{ m.said(conversation.first if tab == "contacts" else conversation.latest) }}</div>
+  <span class="tm">{{ conversation.last_activity_at_ms | stamp }}</span>
+  {% if conversation.pending_count %}<span class="un">{{ conversation.pending_count }}</span>{% else %}<span></span>{% endif %}
+</a>
+{% else %}
+<p class="none">{{ t.text("chats.none." ~ tab) }}</p>
+{% endfor %}
+{% if onward %}<button class="btn sm more-rows" type="button" hx-get="/ui/chats/agent/{{ ref(agent.id) }}/rows?{{ 'tab=contacts&' if tab == 'contacts' else '' }}{{ onward }}" hx-swap="outerHTML">{{ t.text("chats.more") }}</button>{% endif %}

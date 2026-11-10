@@ -1,0 +1,15 @@
+{# what the agent says to contacts waiting for a decision, edited in place by an account that may change the agent; nothing set, it says nothing #}
+<div class="card autoreply" x-data="{ editing: false }">
+  <div class="card-hd"><h3>{{ t.text("chats.reply") }}</h3>{% if named is defined and named %}<span class="sub">{{ agent.name }}</span>{% endif %}{% if update %}<button class="more" type="button" @click="editing = !editing" title="{{ t.text('chats.reply.edit') }}" aria-label="{{ t.text('chats.reply.edit') }}">{% include "chats/icons/pencil.svg" %}</button>{% endif %}</div>
+  {% if named is defined and named %}<p class="hint"><span class="wide">{{ t.text("chats.reply.hint") }}</span><span class="narrow">{{ t.text("chats.reply.hint.named", {"agent": agent.name}) }}</span></p>
+  {% else %}<p class="hint">{{ t.text("chats.reply.hint") }}</p>{% endif %}
+  <div class="bubble agent{% if not reply %} empty{% endif %}" x-show="!editing">{{ reply or t.text("chats.reply.none") }}</div>
+  {% if update %}
+  <form class="edit" x-show="editing" x-cloak hx-post="/ui/chats/reply/{{ ref(agent.id) }}" hx-target="closest .autoreply" hx-swap="outerHTML">
+    {% if named is defined and named %}<input type="hidden" name="named" value="1">{% endif %}
+    <textarea name="text" rows="3" placeholder="{{ t.text('chats.reply.placeholder') }}">{{ reply or "" }}</textarea>
+    <div class="row"><button class="btn sm" type="button" @click="editing = false">{{ t.text("chats.cancel") }}</button><button class="btn sm primary" type="submit"{% if not agent.online %} disabled{% endif %}>{{ t.text("chats.save") }}</button></div>
+  </form>
+  {% endif %}
+  {% if failed %}<p class="errv" role="alert">{{ t.text("chats.reply.failed") }}</p>{% endif %}
+</div>

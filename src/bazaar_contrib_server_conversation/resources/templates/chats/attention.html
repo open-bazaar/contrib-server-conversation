@@ -1,0 +1,24 @@
+{% extends "server/base.html" %}
+{% import "chats/macros.html" as m with context %}
+{% block title %}{{ t.text("chats.attention.title") }}{% endblock %}
+{% block top %}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('chats.css') }}"><script src="{{ asset('chats.js') }}"></script>{% endblock %}
+{% block body %}
+{# what waits for the account: first contacts of the agents it sees, newest first, to let in or turn away, and agents that failed to start, with why #}
+<div id="attention" class="card attention" data-topic="chats.list" data-scope='{"agent": ""}' data-seen='{{ seen | tojson }}' hx-get="/ui/chats/attention" hx-select="#attention" hx-target="#attention" hx-swap="outerHTML" hx-trigger="bazaar:change, chats:reviewed from:body">
+  <div class="card-hd"><h3>{{ t.text("chats.attention.title") }}</h3>{% if waiting or failed %}<span class="count-pill">{{ (waiting | length) + (failed | length) }}</span>{% endif %}<a class="more" href="/chats/?tab=contacts" target="_top">{{ t.text("chats.all") }}{{ m.icon("chevron-right") }}</a></div>
+  <div class="attn">
+    {% set approvable = approve %}
+    {% for row in waiting %}{% include "chats/asked.html" %}{% endfor %}
+    {% for agent in failed %}
+    <div class="attn-item">
+      <div class="ic err">{{ m.icon("triangle-alert") }}</div>
+      <div class="tx">{{ t.text("chats.failed.start", {"agent": "<b>%s</b>" | format(agent.name | e), "computer": computers.get(agent.computer_id, "—") | e}) | safe }}
+        {% if agent.activity.reason %}<div class="q mono">{{ agent.activity.reason }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    {% if not waiting and not failed %}<p class="none">{{ t.text("chats.attention.none") }}</p>{% endif %}
+  </div>
+</div>
+{% endblock %}
