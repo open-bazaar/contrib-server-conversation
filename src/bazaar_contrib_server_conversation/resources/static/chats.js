@@ -15,7 +15,8 @@
 
   const open = (address, panes) => {
     htmx.ajax("GET", panes, { target: "#opened", swap: "innerHTML" });
-    if (address) history.pushState(null, "", address);
+    // htmx draws it again when the reader comes back to it
+    if (address) history.pushState({ htmx: true }, "", address);
     mark();
   };
 
@@ -87,10 +88,13 @@
     }
   };
 
+  // ahead of the page's own way of following links: what is handled here
+  // goes no further
   document.addEventListener("click", (event) => {
     const link = event.target.closest?.("a[data-panes]");
     if (link && wide() && !event.metaKey && !event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
+      event.stopPropagation();
       open(link.getAttribute("href"), link.dataset.panes);
       return;
     }
@@ -102,17 +106,23 @@
         finder.querySelector("[data-within]").value = within.dataset.within;
         finder.querySelector("input[name=q]").focus();
       } else {
-        location.assign(`/ui/chats/?q=&in=${encodeURIComponent(within.dataset.within)}`);
+        htmx.ajax("GET", `/ui/chats/?q=&in=${encodeURIComponent(within.dataset.within)}`, {
+          target: "body",
+          swap: "innerMorph show:top",
+          push: "true",
+        });
       }
+      event.stopPropagation();
       return;
     }
     // the header's reminders are those beside the messages
     const reminders = event.target.closest?.("[data-reminders]");
     if (reminders && wide()) {
       event.preventDefault();
+      event.stopPropagation();
       document.getElementById("reminders")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
-  });
+  }, true);
 
   // the wide bar's agent picker and the phone list's both belong to the
   // filter form: only the one changed goes with it
@@ -141,6 +151,13 @@
 
   document.addEventListener("htmx:after:swap", (event) => {
     const target = event.target;
+    // the whole page changed in place: it opens as a page loaded does
+    if (event.detail.ctx?.target === document.body) {
+      const messages = document.querySelector(".msgs");
+      if (messages) settle(messages);
+      first() || mark();
+      return;
+    }
     if (target.id === "opened") {
       const messages = target.querySelector(".msgs");
       if (messages) settle(messages);
@@ -164,8 +181,6 @@
     const messages = older.closest(".msgs");
     messages.dataset.below = String(messages.scrollHeight - messages.scrollTop);
   });
-
-  addEventListener("popstate", () => location.reload());
 
   // a wide page with none chosen opens the first of its list, once there is one
   const first = () => {
