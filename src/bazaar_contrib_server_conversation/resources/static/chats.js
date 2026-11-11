@@ -148,7 +148,21 @@
     }
     if (target.matches?.(".pane.list")) return first() || mark();
     const messages = target.closest?.(".msgs") || document.querySelector(".msgs");
-    if (messages) tidy(messages);
+    if (!messages) return;
+    tidy(messages);
+    if (messages.dataset.below) {
+      messages.scrollTop = messages.scrollHeight - Number(messages.dataset.below);
+      delete messages.dataset.below;
+    }
+  });
+
+  // older messages come in above those read: what was in view stays where
+  // it was, the next older ones waiting until the reader scrolls up again
+  document.addEventListener("htmx:before:swap", (event) => {
+    const older = event.target;
+    if (!older.classList?.contains("older")) return;
+    const messages = older.closest(".msgs");
+    messages.dataset.below = String(messages.scrollHeight - messages.scrollTop);
   });
 
   addEventListener("popstate", () => location.reload());
