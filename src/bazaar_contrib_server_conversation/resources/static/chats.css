@@ -126,7 +126,9 @@ mark { color: var(--saffron); background: var(--saffron-soft); font-weight: 600;
 .bubble img.md-img { display: block; max-width: 300px; border-radius: 10px; }
 .bubble a { color: var(--indigo); }
 .bubble.empty { color: var(--muted); }
-.receipt { margin-top: 6px; display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--sunken); border: 1px dashed var(--line-strong); color: var(--muted); font-size: 12px; line-height: 17px; text-decoration: none; white-space: nowrap; }
+.receipt { margin-top: 6px; max-width: 100%; display: inline-flex; align-items: center; gap: 8px; min-height: 28px; padding: 0 12px 0 10px; border-radius: 14px; background: var(--sunken); border: 1px dashed var(--line-strong); color: var(--muted); font-size: 12px; line-height: 17px; text-decoration: none; }
+.receipt > span { min-width: 0; padding: 4px 0; }
+.receipt .part { white-space: nowrap; }
 .receipt b { color: var(--text-2); font-weight: 600; }
 .receipt svg { width: 13px; height: 13px; }
 .receipt + .bubble { margin-top: 8px; }
@@ -317,7 +319,7 @@ mark { color: var(--saffron); background: var(--saffron-soft); font-weight: 600;
 :root[data-layout="narrow"] .msg .who { font-size: 12.5px; line-height: 19px; gap: 7px; }
 :root[data-layout="narrow"] .tag { font-size: 10px; padding: 1px 5px; }
 :root[data-layout="narrow"] .bubble { margin-top: 4px; padding: 8px 12px; max-width: 100%; line-height: 22px; }
-:root[data-layout="narrow"] .receipt { margin-top: 5px; gap: 6px; height: 26px; padding: 0 10px 0 9px; font-size: 11.5px; line-height: 16px; }
+:root[data-layout="narrow"] .receipt { margin-top: 5px; gap: 6px; min-height: 26px; padding: 0 10px 0 9px; border-radius: 13px; font-size: 11.5px; line-height: 16px; }
 :root[data-layout="narrow"] .receipt + .bubble { margin-top: 4px; }
 :root[data-layout="narrow"] .readonly { margin: 4px 16px 12px; padding: 9px 12px; align-items: flex-start; font-size: 12px; line-height: 1.5; }
 :root[data-layout="narrow"] .readonly svg { margin-top: 1px; top: 0; }
