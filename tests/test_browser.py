@@ -115,8 +115,12 @@ async def test_the_conversations_read_and_decide_as_the_design_shows(
                 else:
                     await expect(messages).to_have_count(0)
                 dev = '.pane.list .conv:has(.tn:text-is("#bazaar-compute 开发"))'
+                # opened in place, the page that listed it still the one shown
+                listing = next(one for one in tab.frames if "/ui/chats/" in one.url)
+                await listing.evaluate("window.kept = true")
                 await shown.locator(dev).click()
                 await expect(messages).to_have_count(1)
+                assert await listing.evaluate("window.kept === true")
                 if wide:
                     # what it is about, beside it
                     await expect(shown.locator(".info .member")).to_have_count(1)
