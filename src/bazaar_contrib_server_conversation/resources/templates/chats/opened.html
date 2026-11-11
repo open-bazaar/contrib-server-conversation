@@ -42,7 +42,9 @@
     {% set working = opened.working %}
     {% include "chats/working.html" %}
   </div>
-  {% if opened.around %}<div class="to-latest"><a class="btn sm" href="/ui/chats/{{ address }}{{ '?' ~ kept if kept else '' }}" data-panes="/ui/chats/{{ address }}/panes{{ '?' ~ kept if kept else '' }}">{{ m.icon("chevron-down") }}{{ t.text("chats.latest") }}</a></div>{% endif %}
+  {# opened at what the search found it goes to the newest; read back from the newest it shows once the newest is out of sight #}
+  {% if opened.around %}<div class="to-latest"><a class="btn sm" href="/ui/chats/{{ address }}{{ '?' ~ kept if kept else '' }}" data-panes="/ui/chats/{{ address }}/panes{{ '?' ~ kept if kept else '' }}">{{ m.icon("chevron-down") }}{{ t.text("chats.latest") }}</a></div>
+  {% else %}<div class="to-latest" hidden><button class="btn sm" type="button" data-latest>{{ m.icon("chevron-down") }}{{ t.text("chats.latest") }}</button></div>{% endif %}
   <div class="readonly">{{ m.icon("lock") }}<span>{{ t.text("chats.readonly." ~ conversation.kind, {"agent": agent.name, "channel": m.channel(conversation.channel) | trim}) }}</span></div>
 </div>
 <div class="pane side info">

@@ -4,7 +4,7 @@ about, a first contact let in after its auto-reply is changed, another
 agent's conversation revoked, a search opened at its hit, the agent's own
 conversations on its page, and what needs a decision on the overview; and
 a long conversation read upward, its older messages coming in above the one
-read without moving it."""
+read without moving it, and a way back to the newest from there."""
 
 from __future__ import annotations
 
@@ -241,6 +241,8 @@ async def test_older_messages_come_in_above_the_one_read(tmp_path: Path):
                 messages = shown.locator(".msgs .msg[data-id]")
                 await expect(messages).not_to_have_count(0)
                 first = await messages.count()
+                latest = shown.locator(".to-latest")
+                await expect(latest).to_be_hidden()
                 # read up to the first message shown: the older ones come in
                 # above it, and it stays in view
                 read = shown.locator(
@@ -251,5 +253,10 @@ async def test_older_messages_come_in_above_the_one_read(tmp_path: Path):
                 )
                 await expect(messages).not_to_have_count(first)
                 await expect(read).to_be_in_viewport()
+                # and from there, back to the newest
+                await expect(latest).to_be_visible()
+                await latest.locator("button").click()
+                await expect(messages.last).to_be_in_viewport()
+                await expect(latest).to_be_hidden()
             finally:
                 await browser.close()

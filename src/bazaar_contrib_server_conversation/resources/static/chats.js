@@ -88,6 +88,25 @@
     }
   };
 
+  // read back from the newest, the way to it shows below the messages, and
+  // goes once the newest is in sight again
+  document.addEventListener(
+    "scroll",
+    (event) => {
+      const messages = event.target;
+      const way = messages.id === "msgs" && messages.parentElement.querySelector(".to-latest:has([data-latest])");
+      if (!way) return;
+      const newest = [...messages.querySelectorAll(".msg, .sys")].at(-1);
+      way.hidden = !newest || newest.getBoundingClientRect().top < messages.getBoundingClientRect().bottom;
+    },
+    true,
+  );
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest?.("[data-latest]")) return;
+    const messages = document.getElementById("msgs");
+    messages.scrollTo({ top: messages.scrollHeight, behavior: "smooth" });
+  });
+
   // ahead of the page's own way of following links: what is handled here
   // goes no further
   document.addEventListener("click", (event) => {
