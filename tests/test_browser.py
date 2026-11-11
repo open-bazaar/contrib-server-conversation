@@ -2,7 +2,9 @@
 node: a conversation opened from the list with its picture and what it is
 about, a first contact let in after its auto-reply is changed, another
 agent's conversation revoked, a search opened at its hit, the agent's own
-conversations on its page, and what needs a decision on the overview."""
+conversations on its page, and what needs a decision on the overview; and
+a long conversation read upward, its older messages coming in above the one
+read without moving it."""
 
 from __future__ import annotations
 
@@ -197,5 +199,53 @@ async def test_the_conversations_read_and_decide_as_the_design_shows(
                 )
                 await expect(attention.locator(".attn-item")).to_have_count(1)
                 await expect(attention.locator(".attn-item")).to_contain_text("设计组")
+            finally:
+                await browser.close()
+
+
+async def test_older_messages_come_in_above_the_one_read(tmp_path: Path):
+    async with (
+        serving() as served,
+        client() as boss,
+        async_playwright() as driver,
+    ):
+        await admin(served, boss)
+        async with computer(
+            served, boss, tmp_path / "kana-vm", "kana-vm", [KANA]
+        ) as pc:
+            for number in range(90):
+                await say(pc, "kana", "yuchanns", YU, f"第 {number} 条")
+            await heard(pc, "kana")
+            await until(
+                lambda: page(served, boss, "/ui/chats/"),
+                lambda shown: names(shown) == ["yuchanns"],
+            )
+            browser = await driver.chromium.launch()
+            try:
+                context = await browser.new_context(
+                    locale="zh-CN", viewport={"width": 1440, "height": 900}
+                )
+                await context.add_cookies(
+                    [
+                        {"name": c.name, "value": c.value or "", "url": served.url}
+                        for c in boss.cookies.jar
+                    ]
+                )
+                tab = await context.new_page()
+                await tab.goto(f"{served.url}/chats")
+                shown = tab.frame_locator("iframe.frame")
+                messages = shown.locator(".msgs .msg[data-id]")
+                await expect(messages).not_to_have_count(0)
+                first = await messages.count()
+                # read up to the first message shown: the older ones come in
+                # above it, and it stays in view
+                read = shown.locator(
+                    f'.msg[data-id="{await messages.first.get_attribute("data-id")}"]'
+                )
+                await shown.locator(".msgs").evaluate(
+                    "messages => { messages.scrollTop = 0; }"
+                )
+                await expect(messages).not_to_have_count(first)
+                await expect(read).to_be_in_viewport()
             finally:
                 await browser.close()
