@@ -28,8 +28,8 @@
 <div class="convs hits">{% include "chats/hits.html" %}</div>
 {% else %}
 <div class="list-tabs">
-  <a class="tab{% if tab == 'chats' %} on{% endif %}" href="/ui/chats/{{ '?agent=' ~ chosen if chosen else '' }}">{{ t.text("chats.tab.chats") }} <span class="n">{{ total }}</span></a>
-  <a class="tab{% if tab == 'contacts' %} on{% endif %}" href="/ui/chats/?tab=contacts{{ '&agent=' ~ chosen if chosen else '' }}">{{ t.text("chats.tab.contacts") }}{% if pending %} <span class="badge">{{ pending }}</span>{% endif %}</a>
+  <a class="tab{% if tab == 'chats' %} on{% endif %}" href="/ui/chats/{{ '?agent=' ~ chosen if chosen else '' }}">{{ m.icon("messages-square") }}<span class="tx">{{ t.text("chats.tab.chats") }}</span> <span class="n">{{ total }}</span></a>
+  <a class="tab{% if tab == 'contacts' %} on{% endif %}" href="/ui/chats/?tab=contacts{{ '&agent=' ~ chosen if chosen else '' }}">{{ m.icon("user-plus") }}<span class="tx">{{ t.text("chats.tab.contacts") }}</span>{% if pending %} <span class="badge">{{ pending }}</span>{% endif %}</a>
   {% set picked = scoped if chosen else [] %}
   <label class="agsel on-narrow">{{ m.icon("bot") }}<span>{{ picked[0].name if picked else t.text("chats.agents.all") }}</span><select name="agent" form="filter" aria-label="{{ t.text('chats.agents') }}">
     <option value="">{{ t.text("chats.agents.all") }}</option>

@@ -56,6 +56,7 @@ html.filled body { display: flex; flex-direction: column; overflow: hidden; }
 /* the list: its tabs, why some agents' conversations are missing, the rows */
 .list-tabs { flex: none; display: flex; align-items: center; gap: 4px; padding: 12px 14px 0; }
 .list-tabs .tab { padding: 8px 10px 10px; text-decoration: none; }
+.list-tabs .tab svg { width: 16px; height: 16px; flex: none; }
 .list-tabs .agsel { display: none; }
 .notice { flex: none; display: flex; flex-direction: column; gap: 6px; margin: 8px 14px 2px; }
 .notice p { margin: 0; display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: var(--r-sm); font-size: 12.5px; line-height: 18px; color: var(--text-2); background: var(--sunken); border: 1px solid var(--line-soft); }
@@ -292,7 +293,8 @@ mark { color: var(--saffron); background: var(--saffron-soft); font-weight: 600;
 :root[data-layout="narrow"] .chats[data-layer="info"] .pane.middle { display: none; }
 :root[data-layout="narrow"] .pane.list { flex: 1; min-height: 0; }
 :root[data-layout="narrow"] .list-tabs { padding: 0 16px 0 10px; border-bottom: 1px solid var(--line-soft); gap: 4px; }
-:root[data-layout="narrow"] .list-tabs .tab { padding: 11px 8px 10px; }
+:root[data-layout="narrow"] .list-tabs .tab { gap: 6px; padding: 11px 10px 10px; }
+:root[data-layout="narrow"] .list-tabs .tab .tx { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 :root[data-layout="narrow"] .list-tabs .agsel { margin-left: auto; position: relative; display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; line-height: 18px; font-weight: 600; color: var(--text-2); }
 :root[data-layout="narrow"] .list-tabs .agsel select { appearance: none; position: absolute; inset: 0; opacity: 0; font: inherit; }
 :root[data-layout="narrow"] .list-tabs .agsel svg { width: 13px; height: 13px; color: var(--muted); }
