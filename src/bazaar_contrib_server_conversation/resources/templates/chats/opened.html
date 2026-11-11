@@ -28,8 +28,8 @@
     {{ m.face(conversation, "gav") }}
     <div class="hd-tx"><h3>{{ m.named(conversation) }}</h3><div class="sub">{{ m.logo(conversation.channel) }}{{ t.text("chats.where", {"channel": m.channel(conversation.channel) | trim, "kind": kind}) }}{% if conversation.kind == "group" %} · {{ t.text("chats.members", {"n": conversation.member_count}) }}{% endif %} · {{ t.text("chats.replies", {"agent": agent.name}) }}</div></div>
     <div class="actions">
-      <button class="icon-btn" type="button" data-within="{{ address | replace('/', '.') }}" title="{{ t.text('chats.search.here') }}" aria-label="{{ t.text('chats.search.here') }}">{{ m.icon("search") }}</button>
-      <a class="icon-btn" href="/ui/chats/{{ address }}/info{{ '?' ~ kept if kept else '' }}#reminders" data-reminders title="{{ t.text('chats.reminders') }}" aria-label="{{ t.text('chats.reminders') }}">{{ m.icon("alarm-clock") }}</a>
+      <button class="icon-btn" type="button" data-within="{{ address | replace('/', '.') }}" data-tip="{{ t.text('chats.search.here') }}" aria-label="{{ t.text('chats.search.here') }}">{{ m.icon("search") }}</button>
+      <a class="icon-btn" href="/ui/chats/{{ address }}/info{{ '?' ~ kept if kept else '' }}#reminders" data-reminders data-tip="{{ t.text('chats.reminders') }}" aria-label="{{ t.text('chats.reminders') }}">{{ m.icon("alarm-clock") }}</a>
     </div>
   </div>
   {# the messages: the newest when it opens, or those around one the search found; each way, more as it scrolls, and new ones as they come #}

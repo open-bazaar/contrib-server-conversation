@@ -353,7 +353,7 @@ wheels = [
 
 [[package]]
 name = "bazaar-contrib-server"
-version = "0.3.0rc11"
+version = "0.3.0rc13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bazaar-contrib-http" },
@@ -371,9 +371,9 @@ dependencies = [
     { name = "starlette" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/51/62/8fe9ac766cd478ea3411bf7582a6ad34de228816b2c9ab7b403227b44db8/bazaar_contrib_server-0.3.0rc11.tar.gz", hash = "sha256:89454d39cfcb90e9c78b1bd9e073657b44389c9a3b8d74ee509b41165f184193", size = 483626, upload-time = "2026-11-11T04:09:14.486Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/fa/ee6ce533edd6dadb44fc9101499fbbcb10a24b6cd97536af4dde0b6dfd63/bazaar_contrib_server-0.3.0rc13.tar.gz", hash = "sha256:b3e3697d956d6a9697fa96a0dd3c7c730ad5d7cd1c473881c0ae65a5f8b44afd", size = 489985, upload-time = "2026-11-11T09:20:14.498Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/bc/58cf4e3470d47bcabad0cbc8bffa2ef3ad5188d1297163692112e1d56d77/bazaar_contrib_server-0.3.0rc11-py3-none-any.whl", hash = "sha256:8f3a5f70796f01557f4bf9df924149dc8768db01dfaa73d20ef70fdb06b68fb7", size = 495985, upload-time = "2026-11-11T04:09:13.24Z" },
+    { url = "https://files.pythonhosted.org/packages/49/1f/01639a7a5c0c641fa38e2e79e5f74812814e7bd7a41ecf43ec0090df8c61/bazaar_contrib_server-0.3.0rc13-py3-none-any.whl", hash = "sha256:581cdc89e51e56e100b8fe7a74dfb43b93be0d6b02539258d5dee0305ccbd9d2", size = 503417, upload-time = "2026-11-11T09:20:12.853Z" },
 ]
 
 [[package]]
@@ -520,7 +520,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.12.0" },
-    { name = "bazaar-contrib-server", specifier = "~=0.3.0rc11" },
+    { name = "bazaar-contrib-server", specifier = "~=0.3.0rc13" },
     { name = "bazaar-contrib-server-access", specifier = "~=0.3.0rc6" },
     { name = "bazaar-contrib-server-activity", specifier = "~=0.3.0rc2" },
     { name = "bazaar-contrib-server-agent", specifier = "~=0.3.0rc4" },
