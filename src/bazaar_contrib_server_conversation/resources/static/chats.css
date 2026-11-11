@@ -43,7 +43,6 @@ html.filled body { display: flex; flex-direction: column; overflow: hidden; }
 .top .finder svg { width: 15px; height: 15px; color: var(--muted); flex: none; }
 .top .finder input { flex: 1; min-width: 0; border: 0; background: none; color: var(--text); font: inherit; outline: none; }
 .top .finder input::placeholder { color: var(--faint); }
-.top .finder input::-webkit-search-cancel-button { display: none; }
 .top .finder .suffix svg { width: 13px; height: 13px; }
 .top .finder:focus-within { border-color: var(--saffron); box-shadow: 0 0 0 4px var(--saffron-soft); background: var(--surface); }
 .top .bar { display: none; }
@@ -219,7 +218,7 @@ mark { color: var(--saffron); background: var(--saffron-soft); font-weight: 600;
 :root[data-layout="narrow"] .autoreply .hint .narrow { display: inline; }
 .autoreply .bubble { margin: 10px 16px 16px; font-size: 13.5px; }
 .autoreply .edit { display: flex; flex-direction: column; gap: 8px; margin: 10px 16px 16px; }
-.autoreply textarea { width: 100%; min-height: 72px; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--sunken); color: var(--text); font: 13.5px/1.6 var(--font-ui); resize: vertical; }
+.autoreply textarea { width: 100%; min-height: 72px; padding: 10px 12px; border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--sunken); color: var(--text); font: 13.5px/1.6 var(--font-ui); }
 .autoreply textarea:focus { outline: none; border-color: var(--saffron); box-shadow: 0 0 0 4px var(--saffron-soft); }
 .autoreply .row { display: flex; justify-content: flex-end; gap: 8px; }
 .autoreply .errv { padding: 0 16px 14px; }
