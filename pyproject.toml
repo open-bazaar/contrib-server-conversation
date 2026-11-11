@@ -1,6 +1,6 @@
 [project]
 name = "bazaar-contrib-server-conversation"
-version = "0.3.0rc6"
+version = "0.3.0rc7"
 description = "The conversations of the Bazaar Compute server: every agent's conversations on its computers, their messages, first contacts let in or turned away, and searching them"
 readme = "README.md"
 license = "Apache-2.0"
