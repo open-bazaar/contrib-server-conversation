@@ -15,7 +15,7 @@ lazy from pathlib import Path
 import pytest
 from computer import agent, computer, heard, say
 from playwright.async_api import async_playwright, expect
-from served import admin, client, names, page, serving, until
+from served import admin, client, names, opened, page, serving, until
 from test_search import picture
 
 KANA = agent("kana", "有马佳奈")
@@ -129,6 +129,7 @@ async def test_the_conversations_read_and_decide_as_the_design_shows(
                 await expect(picture_shown).to_have_js_property("naturalWidth", 300)
                 if not wide:
                     await shown.locator(".thread-bar a.icon-btn").click()
+                    await expect(tab).to_have_url(re.compile(r"/info$"))
                     await expect(shown.locator(".info .member")).to_have_count(1)
                     await shown.locator(".top .back").click()
                     await expect(tab).to_have_url(re.compile(r"/chats/\d+/\d+$"))
@@ -227,9 +228,14 @@ async def test_older_messages_come_in_above_the_one_read(tmp_path: Path):
             for number in range(90):
                 await say(pc, "kana", "yuchanns", YU, f"第 {number} 条")
             await heard(pc, "kana")
-            await until(
+            listing = await until(
                 lambda: page(served, boss, "/ui/chats/"),
                 lambda shown: names(shown) == ["yuchanns"],
+            )
+            # every message is in before it is read
+            await until(
+                lambda: page(served, boss, f"/ui/chats/{opened(listing, 'yuchanns')}"),
+                lambda shown: "第 89 条" in shown,
             )
             browser = await driver.chromium.launch()
             try:

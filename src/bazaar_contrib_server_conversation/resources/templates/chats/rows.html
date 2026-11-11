@@ -12,4 +12,4 @@
 {% else %}
 <p class="none">{{ t.text("chats.none." ~ tab) }}</p>
 {% endfor %}
-{% if onward %}<div class="more-rows" hx-get="/ui/chats/rows?{{ kept ~ '&' if kept else '' }}{{ onward }}" hx-trigger="intersect once" hx-swap="outerHTML"></div>{% endif %}
+{% if onward %}<div class="more-rows paging" hx-get="/ui/chats/rows?{{ kept ~ '&' if kept else '' }}{{ onward }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.more") }}</div>{% endif %}

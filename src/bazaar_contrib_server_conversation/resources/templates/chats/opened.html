@@ -35,10 +35,10 @@
   {# the messages: the newest when it opens, or those around one the search found; each way, more as it scrolls, and new ones as they come #}
   <div class="msgs{% if opened.around %} at{% endif %}" id="msgs"{% if opened.around %} data-mark="{{ request.query_params.get('q', '') }}"{% endif %}>
     <span hidden data-topic="chats.thread" data-scope='{{ {"agent": ref(agent.id) | string, "thread": ref(conversation.thread_id) | string} | tojson }}' data-seen='{{ thread_seen | tojson }}' data-newer="/ui/chats/{{ address }}/messages"></span>
-    {% if opened.history.has_before and opened.history.messages %}<div class="older" hx-get="/ui/chats/{{ address }}/messages?before={{ opened.history.messages[0].message_id | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"></div>{% endif %}
+    {% if opened.history.has_before and opened.history.messages %}<div class="older paging" hx-get="/ui/chats/{{ address }}/messages?before={{ opened.history.messages[0].message_id | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.older") }}</div>{% endif %}
     {% set messages = opened.history.messages %}{% set receipts = opened.receipts %}{% set around = opened.around %}
     {% include "chats/said.html" %}
-    {% if opened.history.has_after and opened.history.messages %}<div class="newer" hx-get="/ui/chats/{{ address }}/messages?after={{ opened.history.messages[-1].message_id | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"></div>{% endif %}
+    {% if opened.history.has_after and opened.history.messages %}<div class="newer paging" hx-get="/ui/chats/{{ address }}/messages?after={{ opened.history.messages[-1].message_id | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.newer") }}</div>{% endif %}
     {% set working = opened.working %}
     {% include "chats/working.html" %}
   </div>
