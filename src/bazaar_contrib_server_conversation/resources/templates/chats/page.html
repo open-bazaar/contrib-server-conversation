@@ -54,7 +54,8 @@
 <section class="content chats" data-layer="{{ layer }}">
   <div class="panes">
     <div class="pane list">{% include "chats/list.html" %}</div>
-    <div id="opened" class="opened">
+    {# the conversation chosen last opens, one still loading given up #}
+    <div id="opened" class="opened" hx-sync="this:replace">
       {% if opened %}{% include "chats/opened.html" %}
       {% elif layer != "list" %}<p class="gone">{{ t.text("chats.unavailable") }}</p>{% endif %}
     </div>
