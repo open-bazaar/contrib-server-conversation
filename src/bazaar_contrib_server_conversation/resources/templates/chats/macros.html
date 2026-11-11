@@ -37,7 +37,7 @@
 {% if n %}{% set _ = said.append(t.text("chats.calls." ~ kind, {"n": n})) %}{% endif %}
 {% endfor %}
 {% set _ = said.append(t.text("chats.calls.seconds", {"n": found.seconds})) %}
-{{- said | join(" · ") | safe -}}
+{%- for one in said %}<span class="part">{{ one | safe }}{% if not loop.last %} ·{% endif %}</span>{% if not loop.last %} {% endif %}{% endfor -%}
 {%- endmacro %}
 
 {# when a reminder fires: its rule for one that repeats, its day and time otherwise #}
