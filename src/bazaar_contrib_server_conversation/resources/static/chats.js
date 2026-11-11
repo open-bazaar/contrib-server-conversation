@@ -182,11 +182,13 @@
     messages.dataset.below = String(messages.scrollHeight - messages.scrollTop);
   });
 
-  // a wide page with none chosen opens the first of its list, once there is one
+  // a wide page with none chosen opens the first of its list, once there is
+  // one; one chosen while the page was changing names itself in the address
   const first = () => {
     const opened = document.getElementById("opened");
     const row = document.querySelector(".convs .conv[data-panes]");
     if (!opened || opened.children.length || !row || !wide()) return false;
+    if (location.pathname !== "/ui/chats/") return false;
     htmx.ajax("GET", row.dataset.panes, { target: "#opened", swap: "innerHTML" });
     row.classList.add("on");
     return true;
