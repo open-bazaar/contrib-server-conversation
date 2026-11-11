@@ -128,9 +128,16 @@ async def test_the_conversations_read_and_decide_as_the_design_shows(
                 await expect(picture_shown).to_have_count(1)
                 await expect(picture_shown).to_have_js_property("naturalWidth", 300)
                 if not wide:
-                    await shown.locator(".thread-bar .icon-btn").click()
+                    await shown.locator(".thread-bar a.icon-btn").click()
                     await expect(shown.locator(".info .member")).to_have_count(1)
                     await shown.locator(".top .back").click()
+                    await expect(tab).to_have_url(re.compile(r"/chats/\d+/\d+$"))
+                    # its own search keeps to it, as 0.2's did
+                    await shown.locator(".thread-bar button[data-within]").click()
+                    within = shown.locator(".top .bar input[name=q]")
+                    await within.fill("Plan")
+                    await within.press("Enter")
+                    await expect(shown.locator(".hits .conv")).to_have_count(1)
 
                 # a first contact, let in once what tifa says meanwhile is changed
                 await tab.goto(f"{served.url}/chats/?tab=contacts")
@@ -160,7 +167,7 @@ async def test_the_conversations_read_and_decide_as_the_design_shows(
                     await expect(shown.locator(".thread-bar b")).to_have_text(
                         "yuchanns"
                     )
-                    await shown.locator(".thread-bar .icon-btn").click()
+                    await shown.locator(".thread-bar a.icon-btn").click()
                 await shown.locator(".approval .undo").click()
                 question = shown.locator(".pop")
                 await expect(question).to_be_visible()

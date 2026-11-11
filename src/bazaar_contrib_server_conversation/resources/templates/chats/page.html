@@ -42,6 +42,7 @@
     <a class="back" href="/ui/chats/{{ '?' ~ kept if kept else '' }}" aria-label="{{ t.text('server.back') }}">{{ m.icon("chevron-left") }}</a>
     {{ m.face(conversation) }}
     <div class="ct"><b>{{ m.named(conversation) }}</b><small>{% if conversation.kind == "group" %}{{ t.text("chats.members", {"n": conversation.member_count}) }} · {% endif %}{{ t.text("chats.replies", {"agent": opened.agent.name}) }}</small></div>
+    <button class="icon-btn" type="button" data-within="{{ ref(opened.agent.id) }}.{{ ref(conversation.thread_id) }}" aria-label="{{ t.text('chats.search.here') }}">{{ m.icon("search") }}</button>
     <a class="icon-btn" href="/ui/chats/{{ ref(opened.agent.id) }}/{{ ref(conversation.thread_id) }}/info{{ '?' ~ kept if kept else '' }}" aria-label="{{ t.text('chats.info') }}">{{ m.icon("ellipsis") }}</a>
   </div>
   {% else %}

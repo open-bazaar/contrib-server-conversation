@@ -272,6 +272,7 @@ mark { color: var(--saffron); background: var(--saffron-soft); font-weight: 600;
 :root[data-layout="narrow"] .top .bar .back { display: grid; place-items: center; width: 36px; height: 36px; margin-left: -10px; color: var(--text-2); flex: none; }
 :root[data-layout="narrow"] .top .bar .back svg { width: 18px; height: 18px; }
 :root[data-layout="narrow"] .top .bar .icon-btn { margin-left: auto; flex: none; }
+:root[data-layout="narrow"] .top .bar .icon-btn + .icon-btn { margin-left: 0; }
 :root[data-layout="narrow"] .top .bar .input { flex: 1; height: 38px; font-size: 15px; line-height: 20px; gap: 8px; }
 :root[data-layout="narrow"] .top .bar .input svg { width: 15px; height: 15px; flex: none; }
 :root[data-layout="narrow"] .top .bar .input input { flex: 1; min-width: 0; border: 0; background: none; color: var(--text); font: inherit; outline: none; }
