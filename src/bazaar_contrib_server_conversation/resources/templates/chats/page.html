@@ -3,7 +3,7 @@
 {% set searching = "q" in request.query_params %}
 {% block title %}{{ m.named(opened.detail.conversation) if opened else t.text("chats.title") }}{% endblock %}
 {% block root %} class="filled"{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ asset('chats.css') }}"><script src="{{ asset('chats.js') }}"></script>{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset('chats.css') }}"><script src="{{ asset('window-list.js', 'server') }}"></script><script src="{{ asset('chats.js') }}"></script>{% endblock %}
 {% block top %}
 <header class="top">
   {# a wide screen: the title, which agents, and the search through their messages #}

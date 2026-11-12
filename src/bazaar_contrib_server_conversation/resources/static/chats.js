@@ -13,6 +13,8 @@
     }
   };
 
+  document.addEventListener("bazaar:window", mark);
+
   const open = (address, panes) => {
     htmx.ajax("GET", panes, { target: "#opened", swap: "innerHTML" });
     // htmx draws it again when the reader comes back to it
