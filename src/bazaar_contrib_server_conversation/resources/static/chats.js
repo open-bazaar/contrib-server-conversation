@@ -190,6 +190,22 @@
       messages.scrollTop = messages.scrollHeight - Number(messages.dataset.below);
       delete messages.dataset.below;
     }
+    if (messages.dataset.newest) {
+      messages.scrollTop = messages.scrollHeight;
+      delete messages.dataset.newest;
+    }
+  });
+
+  // what comes in while the reader is at the newest keeps them at the newest,
+  // as in 0.2; read further up, they stay where they are; a page of newer
+  // ones scrolled down to is not followed, or the next would load at once
+  document.addEventListener("htmx:before:swap", (event) => {
+    const target = event.target;
+    const messages = target.closest?.(".msgs");
+    if (!messages || target.classList.contains("older") || target.classList.contains("newer")) return;
+    if (Math.ceil(messages.scrollTop + messages.clientHeight) >= messages.scrollHeight) {
+      messages.dataset.newest = "true";
+    }
   });
 
   // older messages come in above those read: what was in view stays where
