@@ -4,7 +4,8 @@ about, a first contact let in after its auto-reply is changed, another
 agent's conversation revoked, a search opened at its hit, the agent's own
 conversations on its page, and what needs a decision on the overview; and
 a long conversation read upward, its older messages coming in above the one
-read without moving it, and a way back to the newest from there."""
+read without moving it, a way back to the newest from there, and what
+comes in followed at the newest but not further up."""
 
 from __future__ import annotations
 
@@ -271,5 +272,27 @@ async def test_older_messages_come_in_above_the_one_read(tmp_path: Path):
                 await latest.locator("button").click()
                 await expect(messages.last).to_be_in_viewport()
                 await expect(latest).to_be_hidden()
+                # at the newest, what comes in is followed
+                await say(pc, "kana", "yuchanns", YU, "第 90 条")
+                arrived = shown.locator('.msgs .msg:has-text("第 90 条")')
+                await expect(arrived).to_be_in_viewport(ratio=1)
+                # further up, the reader stays where they are
+                await shown.locator(".msgs").evaluate(
+                    "messages => { messages.scrollTop = 0; }"
+                )
+                # the first message the reader sees, older ones come in or not
+                await expect(shown.locator(".msgs .older")).to_have_count(0)
+                seen = await shown.locator(".msgs").evaluate(
+                    """messages => [...messages.querySelectorAll('.msg[data-id]')].find(
+                        one => one.getBoundingClientRect().bottom > messages.getBoundingClientRect().top
+                    ).dataset.id"""
+                )
+                top = shown.locator(f'.msgs .msg[data-id="{seen}"]')
+                await expect(top).to_be_in_viewport()
+                await say(pc, "kana", "yuchanns", YU, "第 91 条")
+                await expect(
+                    shown.locator('.msgs .msg:has-text("第 91 条")')
+                ).to_have_count(1)
+                await expect(top).to_be_in_viewport()
             finally:
                 await browser.close()
