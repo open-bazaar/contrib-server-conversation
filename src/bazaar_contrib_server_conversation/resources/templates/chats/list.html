@@ -25,7 +25,7 @@
   </form>
 </div>
 {{ m.away(away, computers) }}
-<div class="convs hits">{% include "chats/hits.html" %}</div>
+<div class="convs hits" data-window-list=".conv">{% include "chats/hits.html" %}</div>
 {% else %}
 <div class="list-tabs">
   <a class="tab{% if tab == 'chats' %} on{% endif %}" href="/ui/chats/{{ '?agent=' ~ chosen if chosen else '' }}">{{ m.icon("messages-square") }}<span class="tx">{{ t.text("chats.tab.chats") }}</span> <span class="n">{{ total }}</span></a>
@@ -37,6 +37,6 @@
   </select>{{ m.icon("chevron-down") }}</label>
 </div>
 {{ m.away(away, computers) }}
-<div class="convs">{% include "chats/rows.html" %}</div>
+<div class="convs" data-window-list=".conv">{% include "chats/rows.html" %}</div>
 {% if tab == "contacts" %}<p class="hint">{{ t.text("chats.contacts.hint") }}</p>{% endif %}
 {% endif %}

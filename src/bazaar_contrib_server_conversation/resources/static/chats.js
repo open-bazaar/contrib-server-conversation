@@ -22,12 +22,20 @@
 
   // a day is headed where its first message is, whichever piece brought it
   const tidy = (messages) => {
-    let day = null;
-    for (const item of [...messages.children]) {
-      if (item.classList.contains("day")) {
-        if (item.dataset.day === day) item.remove();
-        else day = item.dataset.day;
-      } else if (item.dataset.day) day = item.dataset.day;
+    const list = messages.windowList;
+    for (const row of messages.querySelectorAll(":scope > .message")) {
+      const before = list.items[Number(row.dataset.windowIndex) - 1];
+      row.querySelector(".day").hidden = before?.data.day === row.dataset.day;
+      const hit = row.querySelector(".msg.hit:not([data-marked])");
+      if (hit) {
+        highlight(hit.querySelector(".bubble"), messages.dataset.mark || "");
+        hit.dataset.marked = "true";
+      }
+    }
+    const way = messages.parentElement.querySelector(".to-latest:has([data-latest])");
+    if (way) {
+      const newest = list.rows.get(list.items.at(-1));
+      way.hidden = !list.items.length || Boolean(newest && newest.getBoundingClientRect().top < messages.getBoundingClientRect().bottom);
     }
   };
 
@@ -53,25 +61,17 @@
     }
   };
 
-  // the conversation opens at its newest, or at the message the search met;
-  // pictures taking their room as they come keep it there
+  // Newly mounted messages take their date from the preceding loaded message,
+  // even when that message is outside the window.
+  document.addEventListener("bazaar:window", (event) => {
+    mark();
+    if (event.target.id === "msgs") tidy(event.target);
+  });
+
   const settle = (messages) => {
-    tidy(messages);
-    const hit = messages.querySelector(".msg.hit");
-    const place = () => {
-      if (hit) hit.scrollIntoView({ block: "center" });
-      else messages.scrollTop = messages.scrollHeight;
-    };
-    if (hit) highlight(hit.querySelector(".bubble"), messages.dataset.mark || "");
-    place();
-    // until the reader scrolls by themselves
-    let held = true;
-    for (const name of ["wheel", "touchmove", "keydown"]) {
-      messages.addEventListener(name, () => (held = false), { once: true, passive: true });
-    }
-    for (const picture of messages.querySelectorAll("img")) {
-      if (!picture.complete) picture.addEventListener("load", () => held && place(), { once: true });
-    }
+    const list = messages.windowList;
+    const hit = list.items.find((item) => item.data.id === messages.dataset.around);
+    list.scrollTo(hit || list.items.at(-1), hit ? "center" : "end");
   };
 
   const tick = () => {
@@ -88,23 +88,10 @@
     }
   };
 
-  // read back from the newest, the way to it shows below the messages, and
-  // goes once the newest is in sight again
-  document.addEventListener(
-    "scroll",
-    (event) => {
-      const messages = event.target;
-      const way = messages.id === "msgs" && messages.parentElement.querySelector(".to-latest:has([data-latest])");
-      if (!way) return;
-      const newest = [...messages.querySelectorAll(".msg, .sys")].at(-1);
-      way.hidden = !newest || newest.getBoundingClientRect().top < messages.getBoundingClientRect().bottom;
-    },
-    true,
-  );
   document.addEventListener("click", (event) => {
     if (!event.target.closest?.("[data-latest]")) return;
-    const messages = document.getElementById("msgs");
-    messages.scrollTo({ top: messages.scrollHeight, behavior: "smooth" });
+    const list = document.getElementById("msgs").windowList;
+    list.scrollTo(list.items.at(-1), "end");
   });
 
   // ahead of the page's own way of following links: what is handled here
@@ -160,9 +147,9 @@
     if (follower.dataset?.topic !== "chats.thread") return;
     const messages = follower.closest(".msgs");
     if (messages.querySelector(".newer")) return;
-    const last = [...messages.querySelectorAll(".msg[data-id], .sys[data-id]")].pop();
+    const last = messages.windowList.items.at(-1);
     if (!last) return;
-    htmx.ajax("GET", `${follower.dataset.newer}?after=${encodeURIComponent(last.dataset.id)}`, {
+    htmx.ajax("GET", `${follower.dataset.newer}?after=${encodeURIComponent(last.data.id)}`, {
       target: "#working",
       swap: "beforebegin",
     });
@@ -185,36 +172,8 @@
     if (target.matches?.(".pane.list")) return first() || mark();
     const messages = target.closest?.(".msgs") || document.querySelector(".msgs");
     if (!messages) return;
+    messages.toggleAttribute("data-window-follow", !messages.querySelector(".newer"));
     tidy(messages);
-    if (messages.dataset.below) {
-      messages.scrollTop = messages.scrollHeight - Number(messages.dataset.below);
-      delete messages.dataset.below;
-    }
-    if (messages.dataset.newest) {
-      messages.scrollTop = messages.scrollHeight;
-      delete messages.dataset.newest;
-    }
-  });
-
-  // what comes in while the reader is at the newest keeps them at the newest,
-  // as in 0.2; read further up, they stay where they are; a page of newer
-  // ones scrolled down to is not followed, or the next would load at once
-  document.addEventListener("htmx:before:swap", (event) => {
-    const target = event.target;
-    const messages = target.closest?.(".msgs");
-    if (!messages || target.classList.contains("older") || target.classList.contains("newer")) return;
-    if (Math.ceil(messages.scrollTop + messages.clientHeight) >= messages.scrollHeight) {
-      messages.dataset.newest = "true";
-    }
-  });
-
-  // older messages come in above those read: what was in view stays where
-  // it was, the next older ones waiting until the reader scrolls up again
-  document.addEventListener("htmx:before:swap", (event) => {
-    const older = event.target;
-    if (!older.classList?.contains("older")) return;
-    const messages = older.closest(".msgs");
-    messages.dataset.below = String(messages.scrollHeight - messages.scrollTop);
   });
 
   // a wide page with none chosen opens the first of its list, once there is
