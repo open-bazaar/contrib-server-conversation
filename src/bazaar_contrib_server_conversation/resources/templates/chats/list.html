@@ -37,6 +37,6 @@
   </select>{{ m.icon("chevron-down") }}</label>
 </div>
 {{ m.away(away, computers) }}
-<div class="convs">{% include "chats/rows.html" %}</div>
+<div class="convs" data-window-list=".conv">{% include "chats/rows.html" %}</div>
 {% if tab == "contacts" %}<p class="hint">{{ t.text("chats.contacts.hint") }}</p>{% endif %}
 {% endif %}

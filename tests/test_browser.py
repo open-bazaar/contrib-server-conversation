@@ -11,10 +11,11 @@ from __future__ import annotations
 
 lazy import asyncio
 lazy import re
+lazy from datetime import datetime, timedelta
 lazy from pathlib import Path
 
 import pytest
-from computer import agent, computer, heard, say
+from computer import agent, computer, heard, hold, say
 from playwright.async_api import async_playwright, expect
 from served import admin, client, names, opened, page, serving, until
 from test_search import picture
@@ -216,32 +217,48 @@ async def test_the_conversations_read_and_decide_as_the_design_shows(
                 await browser.close()
 
 
-async def test_older_messages_come_in_above_the_one_read(tmp_path: Path):
-    async with (
-        serving() as served,
-        client() as boss,
-        async_playwright() as driver,
-    ):
+@pytest.mark.parametrize("size", [(1440, 900), (390, 844)], ids=["wide", "phone"])
+async def test_older_messages_come_in_above_the_one_read(
+    tmp_path: Path, size: tuple[int, int]
+):
+    async with serving() as served, client() as boss, async_playwright() as driver:
         await admin(served, boss)
         async with computer(
             served, boss, tmp_path / "kana-vm", "kana-vm", [KANA]
         ) as pc:
-            for number in range(90):
-                await say(pc, "kana", "yuchanns", YU, f"第 {number} 条")
+            await asyncio.to_thread(picture, tmp_path / "notes.png", 300, 420)
+            start = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+            for number in range(180):
+                when = (
+                    start - timedelta(days=2 - number // 70) + timedelta(seconds=number)
+                )
+                await say(
+                    pc,
+                    "kana",
+                    "yuchanns",
+                    YU,
+                    f"第 {number} 项的评审意见已经整理好了，请帮我看看。",
+                    at_ms=int(when.timestamp() * 1000),
+                    attachments=[
+                        {"path": str(tmp_path / "notes.png"), "media_type": "image/png"}
+                    ]
+                    if number in (45, 135, 179)
+                    else (),
+                )
             await heard(pc, "kana")
             listing = await until(
                 lambda: page(served, boss, "/ui/chats/"),
                 lambda shown: names(shown) == ["yuchanns"],
             )
-            # every message is in before it is read
+            address = opened(listing, "yuchanns")
             await until(
-                lambda: page(served, boss, f"/ui/chats/{opened(listing, 'yuchanns')}"),
-                lambda shown: "第 89 条" in shown,
+                lambda: page(served, boss, f"/ui/chats/{address}"),
+                lambda shown: "第 179 项" in shown,
             )
             browser = await driver.chromium.launch()
             try:
                 context = await browser.new_context(
-                    locale="zh-CN", viewport={"width": 1440, "height": 900}
+                    locale="zh-CN", viewport={"width": size[0], "height": size[1]}
                 )
                 await context.add_cookies(
                     [
@@ -250,49 +267,112 @@ async def test_older_messages_come_in_above_the_one_read(tmp_path: Path):
                     ]
                 )
                 tab = await context.new_page()
-                await tab.goto(f"{served.url}/chats")
+                errors, requests = [], []
+                tab.on("pageerror", lambda error: errors.append(str(error)))
+                tab.on(
+                    "request",
+                    lambda request: (
+                        requests.append(request.url)
+                        if "/messages?" in request.url
+                        else None
+                    ),
+                )
+                await tab.goto(f"{served.url}/chats/{address}")
                 shown = tab.frame_locator("iframe.frame")
-                messages = shown.locator(".msgs .msg[data-id]")
-                await expect(messages).not_to_have_count(0)
-                first = await messages.count()
+                messages = shown.locator(".msgs")
+                rows = shown.locator(".msgs .msg[data-id]")
+                newest = shown.locator('.msgs .msg:has-text("第 179 项")')
+                await expect(newest).to_be_in_viewport()
+                await expect(newest.locator("img")).to_have_js_property(
+                    "complete", True
+                )
                 latest = shown.locator(".to-latest")
                 await expect(latest).to_be_hidden()
-                # read up to the first message shown: the older ones come in
-                # above it, and it stays in view
-                read = shown.locator(
-                    f'.msg[data-id="{await messages.first.get_attribute("data-id")}"]'
-                )
-                await shown.locator(".msgs").evaluate(
-                    "messages => { messages.scrollTop = 0; }"
-                )
-                await expect(messages).not_to_have_count(first)
-                await expect(read).to_be_in_viewport()
-                # and from there, back to the newest
+                maximum = await rows.count()
+                older = shown.locator(".msgs .older")
+                while await older.count():
+                    cursor = await older.get_attribute("hx-get")
+                    assert cursor is not None
+                    # The first loaded message is visible while its older page
+                    # arrives, and remains at the same reading position.
+                    await messages.evaluate("node => { node.scrollTop = 0; }")
+                    await expect(
+                        shown.locator(f'.older[hx-get="{cursor}"]')
+                    ).to_have_count(0)
+                    before = cursor.split("before=", 1)[1]
+                    await expect(
+                        shown.locator(f'.msgs .msg[data-id="{before}"]')
+                    ).to_be_in_viewport()
+                    maximum = max(maximum, await rows.count())
+                assert maximum < 50
+                assert sum("before=" in url for url in requests) >= 2
+                await messages.evaluate("node => { node.scrollTop = 0; }")
+                first = shown.locator('.msgs .msg:has-text("第 0 项")')
+                await expect(first).to_be_in_viewport()
                 await expect(latest).to_be_visible()
-                await latest.locator("button").click()
-                await expect(messages.last).to_be_in_viewport()
+                loaded = len(requests)
+                # Dates belong to their first loaded message, not to each page
+                # or to the first row that happens to be mounted.
+                dates = set()
+                while True:
+                    labels = await shown.locator(
+                        ".msgs .day:not([hidden])"
+                    ).all_text_contents()
+                    assert len(labels) == len(set(labels))
+                    dates.update(labels)
+                    if await messages.evaluate(
+                        "node => Math.ceil(node.scrollTop + node.clientHeight) >= node.scrollHeight"
+                    ):
+                        break
+                    await messages.evaluate(
+                        "node => { node.scrollTop += node.clientHeight / 2; }"
+                    )
+                    await tab.evaluate("() => new Promise(requestAnimationFrame)")
+                assert len(dates) == 3
+                assert len(requests) == loaded
+                await expect(newest).to_be_in_viewport()
                 await expect(latest).to_be_hidden()
-                # at the newest, what comes in is followed
-                await say(pc, "kana", "yuchanns", YU, "第 90 条")
-                arrived = shown.locator('.msgs .msg:has-text("第 90 条")')
+                await say(pc, "kana", "yuchanns", YU, "第 180 项的意见也已经补齐。")
+                arrived = shown.locator('.msgs .msg:has-text("第 180 项")')
                 await expect(arrived).to_be_in_viewport(ratio=1)
-                # further up, the reader stays where they are
-                await shown.locator(".msgs").evaluate(
-                    "messages => { messages.scrollTop = 0; }"
+                tail = await arrived.get_attribute("data-id")
+                await messages.evaluate("node => { node.scrollTop = 0; }")
+                await expect(first).to_be_in_viewport()
+                await expect(arrived).to_have_count(0)
+                async with tab.expect_request(
+                    lambda request: request.url.endswith(f"after={tail}")
+                ):
+                    await say(pc, "kana", "yuchanns", YU, "第 181 项的意见也已经补齐。")
+                await until(
+                    lambda: page(served, boss, f"/ui/chats/{address}"),
+                    lambda text: "第 181 项" in text,
                 )
-                # the first message the reader sees, older ones come in or not
-                await expect(shown.locator(".msgs .older")).to_have_count(0)
-                seen = await shown.locator(".msgs").evaluate(
-                    """messages => [...messages.querySelectorAll('.msg[data-id]')].find(
-                        one => one.getBoundingClientRect().bottom > messages.getBoundingClientRect().top
-                    ).dataset.id"""
+                await expect(first).to_be_in_viewport()
+                # A later event must use the loaded tail, not the visible rows.
+                await latest.locator("button").click()
+                final = shown.locator('.msgs .msg:has-text("第 181 项")')
+                await expect(final).to_be_in_viewport(ratio=1)
+                await expect(arrived).to_have_count(1)
+                await expect(latest).to_be_hidden()
+                await hold(pc, "kana", True)
+                await say(
+                    pc,
+                    "kana",
+                    "yuchanns",
+                    YU,
+                    "请再看看刚补充的这些意见。",
+                    mention=True,
                 )
-                top = shown.locator(f'.msgs .msg[data-id="{seen}"]')
-                await expect(top).to_be_in_viewport()
-                await say(pc, "kana", "yuchanns", YU, "第 91 条")
-                await expect(
-                    shown.locator('.msgs .msg:has-text("第 91 条")')
-                ).to_have_count(1)
-                await expect(top).to_be_in_viewport()
+                await expect(shown.locator("#working .typing")).to_be_in_viewport()
+                await messages.evaluate("node => { node.scrollTop = 0; }")
+                await expect(first).to_be_in_viewport()
+                await hold(pc, "kana", False)
+                await expect(shown.locator("#working .typing")).to_have_count(0)
+                await expect(first).to_be_in_viewport()
+                await tab.set_viewport_size(
+                    {"width": 390 if size[0] >= 960 else 1440, "height": 844}
+                )
+                await expect(first).to_be_in_viewport()
+                assert not errors, errors
             finally:
                 await browser.close()

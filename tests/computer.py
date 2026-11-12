@@ -187,6 +187,7 @@ async def say(
     title: str | None = None,
     review: str = "approved",
     mention: bool = False,
+    at_ms: int | None = None,
     attachments: Sequence[dict[str, str]] = (),
 ) -> str:
     """Leave a message in the agent's inbox; its id."""
@@ -201,6 +202,7 @@ async def say(
         "text": text,
         "review": review,
         "mention": mention,
+        "at_ms": at_ms,
         "attachments": list(attachments),
     }
     # written aside and moved in, so the channel never reads half of it

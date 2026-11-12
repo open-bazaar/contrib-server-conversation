@@ -132,3 +132,102 @@ async def test_search_windows_loaded_hits_and_restores_them(
                 assert not errors, errors
             finally:
                 await browser.close()
+
+
+@pytest.mark.parametrize("size", [(1440, 900), (390, 844)], ids=["wide", "phone"])
+async def test_conversations_window_pages_and_keep_selection(
+    tmp_path: Path, size: tuple[int, int]
+):
+    async with serving() as served, client() as boss, async_playwright() as driver:
+        await admin(served, boss)
+        async with computer(
+            served, boss, tmp_path / "node", "groups", [agent("kana", "有马佳奈")]
+        ) as pc:
+            for number in range(180):
+                await say(
+                    pc,
+                    "kana",
+                    f"project-{number}",
+                    {"id": "yu", "name": "yuchanns", "display_name": "yuchanns"},
+                    f"项目 {number} 的评审材料已经整理好，请有空时帮忙看看。",
+                    kind="group",
+                    title=f"项目 {number}",
+                )
+            await heard(pc, "kana")
+            await until(
+                lambda: page(served, boss, "/ui/chats/"),
+                lambda text: '<span class="n">180</span>' in text,
+            )
+            browser = await driver.chromium.launch()
+            try:
+                context = await browser.new_context(
+                    locale="zh-CN", viewport={"width": size[0], "height": size[1]}
+                )
+                await context.add_cookies(
+                    [
+                        {"name": c.name, "value": c.value or "", "url": served.url}
+                        for c in boss.cookies.jar
+                    ]
+                )
+                tab = await context.new_page()
+                errors, requests = [], []
+                tab.on("pageerror", lambda error: errors.append(str(error)))
+                tab.on(
+                    "request",
+                    lambda request: (
+                        requests.append(request.url)
+                        if "/ui/chats/rows?" in request.url
+                        else None
+                    ),
+                )
+                await tab.goto(f"{served.url}/chats")
+                shown = tab.frame_locator("iframe.frame")
+                rows = shown.locator(".convs .conv")
+                await expect(rows.first).to_be_visible()
+                address = await rows.first.get_attribute("href")
+                title = await rows.first.locator(".tn").inner_text()
+                root = shown.locator(".convs" if size[0] >= 960 else ".panes")
+                more = shown.locator(".convs .more-rows")
+                maximum = await rows.count()
+                while await more.count():
+                    cursor = await more.get_attribute("hx-get")
+                    await root.evaluate(
+                        "node => { node.scrollTop = node.scrollHeight; }"
+                    )
+                    await expect(
+                        shown.locator(f'.more-rows[hx-get="{cursor}"]')
+                    ).to_have_count(0)
+                    maximum = max(maximum, await rows.count())
+                assert requests
+                assert maximum < 50
+                restored = shown.locator(f'.convs .conv[href="{address}"]')
+                await expect(restored).to_have_count(0)
+                loaded = len(requests)
+                await root.evaluate("node => { node.scrollTop = 0; }")
+                await expect(restored).to_be_in_viewport()
+                assert len(requests) == loaded
+                await restored.click()
+                await expect(shown.locator(".msgs .bubble")).to_contain_text(title)
+                if size[0] >= 960:
+                    await expect(restored).to_have_class("conv on")
+                    await root.evaluate(
+                        "node => { node.scrollTop = node.scrollHeight; }"
+                    )
+                    await expect(restored).to_have_count(0)
+                    await root.evaluate("node => { node.scrollTop = 0; }")
+                    await expect(restored).to_have_class("conv on")
+                    assert len(requests) == loaded
+                    await rows.nth(1).click()
+                else:
+                    await shown.locator(".top .back").click()
+                    await expect(rows.first).to_be_visible()
+                    await rows.nth(1).click()
+                await expect(shown.locator(".msgs .bubble")).not_to_contain_text(title)
+                await tab.go_back()
+                if size[0] >= 960:
+                    await expect(shown.locator(".msgs .bubble")).to_contain_text(title)
+                else:
+                    await expect(rows.first).to_be_visible()
+                assert not errors, errors
+            finally:
+                await browser.close()

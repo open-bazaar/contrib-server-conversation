@@ -3,7 +3,8 @@
 {% set seen = namespace(day=none) %}
 {% for message in messages %}
 {% set key, label = message.at_ms | day %}
-{% if key != seen.day %}<span class="day" data-day="{{ key }}">{{ label }}</span>{% set seen.day = key %}{% endif %}
+<div class="message" data-day="{{ key }}" data-id="{{ message.message_id }}">
+<span class="day"{% if key == seen.day %} hidden{% endif %}>{{ label }}</span>{% set seen.day = key %}
 {% if message.system_message_kind %}
 <div class="sys" data-day="{{ key }}" data-id="{{ message.message_id }}">{{ m.icon("alarm-clock") }}<span>{{ message.body }}</span><span class="tm">{{ message.at_ms | minute }}</span></div>
 {% else %}
@@ -27,4 +28,5 @@
   </div>
 </div>
 {% endif %}
+</div>
 {% endfor %}

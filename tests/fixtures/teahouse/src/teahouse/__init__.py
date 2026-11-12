@@ -138,7 +138,7 @@ class TeahouseChannel:
                         )
                         for item in message["attachments"]
                     ),
-                    occurred_at_ms=time_ns() // 1_000_000,
+                    occurred_at_ms=message["at_ms"] or time_ns() // 1_000_000,
                     mentions_agent=message["mention"],
                     metadata={"review": message["review"]},
                 )
