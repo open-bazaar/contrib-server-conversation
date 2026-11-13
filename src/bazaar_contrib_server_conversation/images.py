@@ -116,7 +116,7 @@ class Images:
             if not on_the_web(url):
                 return None
             upstream = await self._session.get(
-                url, headers={"User-Agent": "bcs"}, allow_redirects=False
+                url, headers={"User-Agent": "Bazaar Server"}, allow_redirects=False
             )
             onward = upstream.headers.get("Location")
             if upstream.status not in REDIRECTED or onward is None:
