@@ -1,11 +1,15 @@
 {% import "chats/macros.html" as m with context %}
 {# one conversation beside its list: its messages and what it is about; one waiting for a decision, the question about it and who it is #}
 {% if opened %}
+<span hidden data-conversation="{{ opened.key }}"></span>
 {% set agent = opened.agent %}
 {% set conversation = opened.detail.conversation %}
 {% set address = ref(agent.id) ~ "/" ~ ref(conversation.thread_id) %}
+{% set sources = opened.sources %}
+{% set scope = request.query_params.get("agent", "") %}
+{% set names = opened.sources | map(attribute="agent.name") | unique | join(t.text("chats.and")) %}
 {% set kind = t.text("chats.kind." ~ conversation.kind) %}
-{% if conversation.review == "pending" %}
+{% if conversation.review == "pending" and not opened.grouped %}
 <div class="pane middle">
   <div class="review-pane">{% include "chats/review.html" %}</div>
 </div>
@@ -26,7 +30,7 @@
 <div class="pane middle">
   <div class="t-hd">
     {{ m.face(conversation, "gav") }}
-    <div class="hd-tx"><h3>{{ m.named(conversation) }}</h3><div class="sub">{{ m.logo(conversation.channel) }}{{ t.text("chats.where", {"channel": m.channel(conversation.channel) | trim, "kind": kind}) }}{% if conversation.kind == "group" %} · {{ t.text("chats.members", {"n": conversation.member_count}) }}{% endif %} · {{ t.text("chats.replies", {"agent": agent.name}) }}</div></div>
+    <div class="hd-tx"><h3>{{ m.named(conversation) }}</h3><div class="sub">{{ m.logo(conversation.channel) }}{{ t.text("chats.where", {"channel": m.channel(conversation.channel) | trim, "kind": kind}) }}{% if conversation.kind == "group" %} · {{ t.text("chats.members", {"n": conversation.member_count}) }}{% endif %} · {{ t.text("chats.replies", {"agent": names}) }}</div></div>
     <div class="actions">
       <button class="icon-btn" type="button" data-within="{{ address | replace('/', '.') }}" data-tip="{{ t.text('chats.search.here') }}" aria-label="{{ t.text('chats.search.here') }}">{{ m.icon("search") }}</button>
       <a class="icon-btn" href="/ui/chats/{{ address }}/info{{ '?' ~ kept if kept else '' }}#reminders" data-reminders data-tip="{{ t.text('chats.reminders') }}" aria-label="{{ t.text('chats.reminders') }}">{{ m.icon("alarm-clock") }}</a>
@@ -34,21 +38,21 @@
   </div>
   {# the messages: the newest when it opens, or those around one the search found; each way, more as it scrolls, and new ones as they come #}
   <div class="msgs{% if opened.around %} at{% endif %}" id="msgs" data-window-list=".message"{% if not opened.history.has_after %} data-window-follow{% endif %}{% if opened.around %} data-around="{{ opened.around }}" data-mark="{{ request.query_params.get('q', '') }}"{% endif %}>
-    <span hidden data-topic="chats.thread" data-scope='{{ {"agent": ref(agent.id) | string, "thread": ref(conversation.thread_id) | string} | tojson }}' data-seen='{{ thread_seen | tojson }}' data-newer="/ui/chats/{{ address }}/messages"></span>
-    {% if opened.history.has_before and opened.history.messages %}<div class="older paging" hx-get="/ui/chats/{{ address }}/messages?before={{ opened.history.messages[0].message_id | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.older") }}</div>{% endif %}
+    <span hidden data-topic="chats.thread" data-scope='{{ {"agent": ref(agent.id) | string, "thread": ref(conversation.thread_id) | string} | tojson }}' data-seen='{{ thread_seen | tojson }}' data-newer="/ui/chats/{{ address }}/messages{{ '?agent=' ~ scope if scope else '' }}"></span>
+    {% if opened.history.has_before and opened.history.messages %}<div class="older paging" hx-get="/ui/chats/{{ address }}/messages?{{ 'agent=' ~ scope ~ '&' if scope else '' }}before={{ opened.history.messages[0].cursor | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.older") }}</div>{% endif %}
     {% set messages = opened.history.messages %}{% set receipts = opened.receipts %}{% set around = opened.around %}
     {% include "chats/said.html" %}
-    {% if opened.history.has_after and opened.history.messages %}<div class="newer paging" hx-get="/ui/chats/{{ address }}/messages?after={{ opened.history.messages[-1].message_id | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.newer") }}</div>{% endif %}
+    {% if opened.history.has_after and opened.history.messages %}<div class="newer paging" hx-get="/ui/chats/{{ address }}/messages?{{ 'agent=' ~ scope ~ '&' if scope else '' }}after={{ opened.history.messages[-1].cursor | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.newer") }}</div>{% endif %}
     {% set working = opened.working %}
     {% include "chats/working.html" %}
   </div>
   {# opened at what the search found it goes to the newest; read back from the newest it shows once the newest is out of sight #}
   {% if opened.around %}<div class="to-latest"><a class="btn sm" href="/ui/chats/{{ address }}{{ '?' ~ kept if kept else '' }}" data-panes="/ui/chats/{{ address }}/panes{{ '?' ~ kept if kept else '' }}">{{ m.icon("chevron-down") }}{{ t.text("chats.latest") }}</a></div>
   {% else %}<div class="to-latest" hidden><button class="btn sm" type="button" data-latest>{{ m.icon("chevron-down") }}{{ t.text("chats.latest") }}</button></div>{% endif %}
-  <div class="readonly">{{ m.icon("lock") }}<span>{{ t.text("chats.readonly." ~ conversation.kind, {"agent": agent.name, "channel": m.channel(conversation.channel) | trim}) }}</span></div>
+  <div class="readonly">{{ m.icon("lock") }}<span>{{ t.text("chats.readonly." ~ conversation.kind, {"agent": names, "channel": m.channel(conversation.channel) | trim}) }}</span></div>
 </div>
 <div class="pane side info">
-  <div class="block ihd">{{ m.face(conversation) }}<div><b>{{ m.named(conversation) }}</b><small>{{ kind }}{% if conversation.kind == "group" %} · {{ t.text("chats.members", {"n": conversation.member_count}) }}{% endif %} · {{ t.text("chats.replies", {"agent": agent.name}) }}</small></div></div>
+  <div class="block ihd">{{ m.face(conversation) }}<div><b>{{ m.named(conversation) }}</b><small>{{ kind }}{% if conversation.kind == "group" %} · {{ t.text("chats.members", {"n": conversation.member_count}) }}{% endif %} · {{ t.text("chats.replies", {"agent": names}) }}</small></div></div>
   <div class="block">
     <h4>{{ t.text("chats.members.title") }}<small>{{ opened.detail.members | length }}</small></h4>
     {% for member in opened.detail.members %}
@@ -62,6 +66,16 @@
     <div class="rem"><div class="ic">{{ m.icon("alarm-clock") }}</div><div><div class="when">{{ m.when(reminder) }}</div><div class="what">{{ reminder.title }}</div></div></div>
     {% else %}<p class="none">{{ t.text("chats.reminders.none") }}</p>{% endfor %}
   </div>
+  {% if opened.grouped %}
+  <div class="block">
+    <h4>{{ t.text("chats.agents") }}</h4>
+    {% for source in opened.sources %}
+    <a class="member" href="/ui/chats/{{ ref(source.agent.id) }}/{{ ref(source.conversation.thread_id) }}?agent={{ ref(source.agent.id) }}" data-panes="/ui/chats/{{ ref(source.agent.id) }}/{{ ref(source.conversation.thread_id) }}/panes?agent={{ ref(source.agent.id) }}">
+      {{ m.agent(source.agent) }}<span class="tag">{{ t.text("chats.review." ~ source.conversation.review) }}</span>{{ m.icon("chevron-right") }}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
   <div class="block">
     <h4>{{ t.text("chats.conversation") }}</h4>
     <div class="kv-row approval"><span>{{ t.text("chats.review") }}</span><span class="v">{% if conversation.review == "approved" %}<span class="ok">{{ m.icon("circle-check") }}{{ t.text("chats.review.approved") }}</span>{% if opened.approve %}<button class="undo" type="button" hx-get="/ui/chats/{{ address }}/revoke{{ '?' ~ kept if kept else '' }}" hx-target="#revoke" hx-swap="innerHTML"{% if not agent.online %} disabled{% endif %}>{{ t.text("chats.revoke") }}</button>{% endif %}{% else %}<span class="no">{{ t.text("chats.review.denied") }}</span>{% endif %}</span>
@@ -70,6 +84,7 @@
     <div class="kv-row"><span>{{ t.text("chats.first") }}</span><span class="v">{{ opened.detail.created_at_ms | moment }}</span></div>
     <div class="kv-row"><span>{{ t.text("chats.messages") }}</span><span class="v num">{{ t.text("chats.messages.count", {"n": "{:,}".format(opened.detail.message_count)}) }}</span></div>
   </div>
+  {% endif %}
 </div>
 {% endif %}
 {% else %}

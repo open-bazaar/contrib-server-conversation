@@ -3,9 +3,9 @@
 {% for row in rows %}
 {% set conversation = row.conversation %}
 {% set address = ref(row.agent.id) ~ "/" ~ ref(conversation.thread_id) %}
-<a class="conv" href="/ui/chats/{{ address }}{{ '?' ~ kept if kept else '' }}" data-panes="/ui/chats/{{ address }}/panes{{ '?' ~ kept if kept else '' }}">
+<a class="conv" href="/ui/chats/{{ address }}{{ '?' ~ kept if kept else '' }}" data-id="{{ row.key }}" data-panes="/ui/chats/{{ address }}/panes{{ '?' ~ kept if kept else '' }}">
   {{ m.face(conversation, "gav") }}
-  <div class="tx"><div class="tt"><span class="tn">{{ m.named(conversation) }}</span> {{ m.agent(row.agent) }}</div>
+  <div class="tx"><div class="tt"><span class="tn">{{ m.named(conversation) }}</span> {% for source in row.sources | unique(attribute="agent.id") %}{{ m.agent(source.agent) }}{% else %}{{ m.agent(row.agent) }}{% endfor %}</div>
   <div class="sn">{% if tab == "contacts" %}{{ t.text("chats.kind." ~ conversation.kind) }}{% if conversation.kind == "group" %} · {{ t.text("chats.members", {"n": conversation.member_count}) }}{% endif %} · {{ m.said(conversation.first) }}{% else %}{{ m.said(conversation.latest) }}{% endif %}</div></div>
   <span class="tm">{{ conversation.last_activity_at_ms | stamp }}</span>
 </a>

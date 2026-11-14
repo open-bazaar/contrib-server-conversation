@@ -117,7 +117,8 @@ class TeahouseChannel:
                 chat = f"teahouse:{self.input.agent_id}:{message['kind']}:{message['chat']}"
                 yield InboundMessage(
                     id=path.stem,
-                    provider_message_id=path.stem,
+                    provider_message_id=message["provider_message_id"],
+                    edit_version=message["edit_version"],
                     channel_session_id=chat,
                     thread_id=chat,
                     target=ChannelTarget(
