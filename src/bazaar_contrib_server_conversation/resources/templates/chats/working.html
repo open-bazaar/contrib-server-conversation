@@ -1,9 +1,10 @@
 {# the agent at work in the conversation, for how long so far #}
 <div id="working"{% if oob is defined and oob %} hx-swap-oob="outerHTML"{% endif %} data-now="{{ now_ms }}" data-words='{{ {"s": t.text("server.duration.seconds", {"n": "{s}"}), "m": t.text("server.duration.minutes", {"m": "{m}", "s": "{s}"}), "h": t.text("server.duration.hours", {"h": "{h}", "m": "{m}"})} | tojson }}'>
   {% for turn in working %}
+  {% set owner = (sources | selectattr("agent.id", "equalto", turn.agent_id) | map(attribute="agent") | first) if sources is defined else agent %}
   <div class="msg">
-    <div class="av {{ agent.name | tint }}">{{ agent.name[:1] | upper }}</div>
-    <div class="body"><div class="who"><b>{{ agent.name }}</b><span class="tag agent">{{ t.text("chats.tag.agent") }}</span></div>
+    <div class="av {{ owner.name | tint }}">{{ owner.name[:1] | upper }}</div>
+    <div class="body"><div class="who"><b>{{ owner.name }}</b><span class="tag agent">{{ t.text("chats.tag.agent") }}</span></div>
     <div class="typing"><span class="lantern work"></span><span>{{ t.text("chats.working") }} · <span data-since="{{ turn.started_ms }}">{{ (now_ms - turn.started_ms) | duration }}</span></span><span class="dots"><i></i><i></i><i></i></span></div></div>
   </div>
   {% endfor %}

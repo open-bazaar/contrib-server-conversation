@@ -8,8 +8,9 @@
 
   const mark = () => {
     const here = location.pathname + location.search;
+    const opened = document.querySelector("#opened [data-conversation]")?.dataset.conversation;
     for (const row of document.querySelectorAll(".convs .conv")) {
-      row.classList.toggle("on", row.getAttribute("href") === here);
+      row.classList.toggle("on", row.getAttribute("href") === here || Boolean(opened && row.dataset.id === opened));
     }
   };
 
@@ -149,10 +150,27 @@
     if (messages.querySelector(".newer")) return;
     const last = messages.windowList.items.at(-1);
     if (!last) return;
-    htmx.ajax("GET", `${follower.dataset.newer}?after=${encodeURIComponent(last.data.id)}`, {
+    const address = new URL(follower.dataset.newer, location.href);
+    address.searchParams.set("after", last.data.cursor);
+    htmx.ajax("GET", address.pathname + address.search, {
       target: "#working",
       swap: "beforebegin",
     });
+  });
+
+  // A provider message may reach its bots at different times. Its identity
+  // stays the same when another observation crosses a paging boundary.
+  document.addEventListener("htmx:before:swap", (event) => {
+    for (const task of event.detail.tasks) {
+      const target = typeof task.target === "string" ? document.querySelector(task.target) : task.target;
+      const list = target.closest(".msgs")?.windowList;
+      if (!list) continue;
+      const seen = new Set(list.items.map((item) => item.data.id));
+      for (const row of task.fragment.querySelectorAll(".message")) {
+        if (seen.has(row.dataset.id)) row.remove();
+        else seen.add(row.dataset.id);
+      }
+    }
   });
 
   document.addEventListener("htmx:after:swap", (event) => {

@@ -76,6 +76,7 @@ def teahouse(agent_id: str) -> Path:
 class ChannelConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     bot: str = Field(min_length=1)
+    space: str = "teahouse"
 
 
 @asynccontextmanager
@@ -117,11 +118,15 @@ class TeahouseChannel:
                 chat = f"teahouse:{self.input.agent_id}:{message['kind']}:{message['chat']}"
                 yield InboundMessage(
                     id=path.stem,
-                    provider_message_id=path.stem,
+                    provider_message_id=message["provider_message_id"],
+                    edit_version=message["edit_version"],
                     channel_session_id=chat,
                     thread_id=chat,
                     target=ChannelTarget(
-                        kind=message["kind"], thread_id=message["chat"]
+                        kind=message["kind"],
+                        thread_id=json.dumps(
+                            {"bot": self.bot, "room": message["chat"]}
+                        ),
                     ),
                     target_presentation=ChannelTargetPresentation(
                         display_name=message["title"]
@@ -204,6 +209,22 @@ class ChannelBuilderParameters(ChannelBuilderConfig):
     kind: ClassVar[str] = "teahouse-channel"
     entity_model: ClassVar[type[BaseModel]] = ChannelConfig
     entry: ClassVar[Contrib[Any]] = channel
+
+    @classmethod
+    def conversation_key(
+        cls, target: ChannelTarget, configs: tuple[dict[str, Any], ...] = ()
+    ) -> str | None:
+        if target.kind != "group":
+            return None
+        address = json.loads(target.thread_id)
+        spaces = {
+            config.space
+            for values in configs
+            if (config := ChannelConfig.model_validate(values)).bot == address["bot"]
+        }
+        if len(spaces) != 1 or not (space := spaces.pop()):
+            return None
+        return json.dumps((space, address["room"]))
 
 
 @asynccontextmanager

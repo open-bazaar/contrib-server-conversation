@@ -6,6 +6,7 @@ from __future__ import annotations
 lazy from bazaar_contrib_server import Account
 lazy from bazaar_contrib_server_agent import Agents
 
+lazy from .groups import Source, group
 lazy from .reader import Reader
 
 
@@ -15,5 +16,13 @@ class Service:
         self._reader = reader
 
     async def pending(self, account: Account) -> int:
-        counts = await self._reader.counts(account, await self._agents.agents(account))
-        return sum(counted.pending.total for counted in counts.values())
+        agents = list(await self._agents.agents(account))
+        await self._reader.counts(account, agents)
+        return len(
+            {
+                group(Source(agent, conversation))
+                for agent in agents
+                for conversation in self._reader.conversations(agent)
+                if conversation.review == "pending"
+            }
+        )

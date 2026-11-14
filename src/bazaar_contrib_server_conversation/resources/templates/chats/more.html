@@ -1,7 +1,7 @@
 {# more of a conversation: older messages above those shown, or newer below them and the agent at work now #}
 {% set address = ref(agent.id) ~ "/" ~ ref(thread_id) %}
 {% set around = none %}
-{% if older and more and messages %}<div class="older paging" hx-get="/ui/chats/{{ address }}/messages?before={{ messages[0].message_id | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.older") }}</div>{% endif %}
+{% if older and more and messages %}<div class="older paging" hx-get="/ui/chats/{{ address }}/messages?{{ 'agent=' ~ scope ~ '&' if scope else '' }}before={{ messages[0].cursor | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.older") }}</div>{% endif %}
 {% include "chats/said.html" %}
-{% if not older and more and messages %}<div class="newer paging" hx-get="/ui/chats/{{ address }}/messages?after={{ messages[-1].message_id | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.newer") }}</div>{% endif %}
+{% if not older and more and messages %}<div class="newer paging" hx-get="/ui/chats/{{ address }}/messages?{{ 'agent=' ~ scope ~ '&' if scope else '' }}after={{ messages[-1].cursor | urlencode }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="spin"></span>{{ t.text("chats.loading.newer") }}</div>{% endif %}
 {% if not older %}{% set oob = true %}{% include "chats/working.html" %}{% endif %}
