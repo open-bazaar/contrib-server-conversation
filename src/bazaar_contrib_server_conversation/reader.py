@@ -24,11 +24,11 @@ lazy from bazaar_contrib_sidecar import RemoteError
 lazy from bazaar_contrib_timer import Timer
 lazy from pydantic import JsonValue
 
-from .models import Operation, Page
+from .models import Conversation, Operation, Page
 
 # the node's side of the conversations, in the versions this package reads
 PACKAGE = "bazaar-contrib-starlink-conversation"
-VERSIONS = "~=0.3.0rc2"
+VERSIONS = "~=0.3.0rc3"
 ENTRY = "starlink-conversation"
 # what was said, and an install that failed, hold for a minute
 FRESH_MS = 60_000
@@ -44,11 +44,11 @@ def now_ms() -> int:
 
 @dataclass(frozen=True, slots=True)
 class Counted:
-    """An agent's conversations as its computer last said: how many are let
-    in, and the first page of those waiting for a decision."""
+    """An agent's conversation directory at the message cursor last read."""
 
     total: int
     pending: Page
+    conversations: tuple[Conversation, ...]
     # the agent's newest message event when asked; no newer one of it came
     # after while the newest of any agent seen since is no newer than upto
     cursor: int
@@ -233,6 +233,10 @@ class Reader:
         if kept is not None:
             self._kept[agent_id] = replace(kept, at_ms=0)
 
+    def conversations(self, agent: Agent) -> tuple[Conversation, ...]:
+        kept = self._kept.get(agent.id)
+        return () if kept is None else kept.conversations
+
     def _ask(self, account: Account, agent: Agent, latest: int) -> asyncio.Task[None]:
         task = self._asking.get(agent.id)
         if task is None:
@@ -246,15 +250,29 @@ class Reader:
             cursor = await self._activity.cursor(
                 account, agent_id=agent.id, messages=True
             )
-            pending = Page.model_validate(
-                await self.call(agent, "conversations", "pending", 0, PAGE)
-            )
-            approved = Page.model_validate(
-                await self.call(agent, "conversations", "approved", 0, 0)
-            )
+            pages: dict[str, Page] = {}
+            for review in ("pending", "approved", "denied"):
+                conversations: list[Conversation] = []
+                while True:
+                    page = Page.model_validate(
+                        await self.call(
+                            agent, "conversations", review, len(conversations), PAGE
+                        )
+                    )
+                    conversations.extend(page.conversations)
+                    if not page.has_more:
+                        break
+                pages[review] = page.model_copy(
+                    update={"conversations": tuple(conversations), "has_more": False}
+                )
             self._kept[agent.id] = Counted(
-                total=approved.total,
-                pending=pending,
+                total=pages["approved"].total,
+                pending=pages["pending"],
+                conversations=tuple(
+                    conversation
+                    for page in pages.values()
+                    for conversation in page.conversations
+                ),
                 cursor=cursor,
                 upto=max(latest, cursor),
                 at_ms=now_ms(),

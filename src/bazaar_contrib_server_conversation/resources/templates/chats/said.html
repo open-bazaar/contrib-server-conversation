@@ -3,23 +3,23 @@
 {% set seen = namespace(day=none) %}
 {% for message in messages %}
 {% set key, label = message.at_ms | day %}
-<div class="message" data-day="{{ key }}" data-id="{{ message.message_id }}">
+<div class="message" data-day="{{ key }}" data-id="{{ message.message_id }}" data-cursor="{{ message.cursor }}">
 <span class="day"{% if key == seen.day %} hidden{% endif %}>{{ label }}</span>{% set seen.day = key %}
 {% if message.system_message_kind %}
 <div class="sys" data-day="{{ key }}" data-id="{{ message.message_id }}">{{ m.icon("alarm-clock") }}<span>{{ message.body }}</span><span class="tm">{{ message.at_ms | minute }}</span></div>
 {% else %}
 {% set mine = message.direction == "outbound" %}
-{% set name = agent.name if mine else (m.who(message.sender) | trim) %}
-{% set role = "agent" if mine else ("peer" if message.sender_kind == "agent" else "human") %}
-{% set found = receipts.get(message.message_id) if mine else none %}
+{% set name = message.author %}
+{% set role = "agent" if message.known else ("peer" if message.sender_kind == "agent" else "human") %}
+{% set found = receipts.get(message.source_message_id) if mine else none %}
 <div class="msg{% if message.message_id == around %} hit{% endif %}" data-day="{{ key }}" data-id="{{ message.message_id }}">
   <div class="av {{ name | tint }}">{{ name[:1] | upper }}</div>
   <div class="body">
     <div class="who"><b>{{ name }}</b><span class="tag {{ role }}">{{ t.text("chats.tag." ~ ("agent" if role != "human" else "human")) }}</span><span class="tm">{{ message.at_ms | minute }}</span></div>
-    {% if found and found.calls.total %}<a class="receipt" href="/agents/{{ ref(agent.id) }}?tab=log&turn={{ found.turn_id | urlencode }}" target="_top">{{ m.icon("terminal") }}<span>{{ m.receipt(found) }}</span>{{ m.icon("chevron-right") }}</a>{% endif %}
+    {% if found and found.calls.total %}<a class="receipt" href="/agents/{{ ref(message.agent_id) }}?tab=log&turn={{ found.turn_id | urlencode }}" target="_top">{{ m.icon("terminal") }}<span>{{ m.receipt(found) }}</span>{{ m.icon("chevron-right") }}</a>{% endif %}
     {% for item in message.attachments %}
     {% if item.attachment_id and item.state == "ready" and (item.media_type or "").startswith("image/") %}
-    <figure class="shot"><img src="/ui/chats/files/{{ ref(agent.id) }}/{{ item.attachment_id | urlencode }}?s={{ signature(agent.id, item.attachment_id) }}" alt="{{ item.name }}" loading="lazy"><figcaption><span>{{ m.icon("image") }}{{ item.name }}</span>{% if item.size_bytes is not none %}<span>{{ item.size_bytes | size }}</span>{% endif %}</figcaption></figure>
+    <figure class="shot"><img src="/ui/chats/files/{{ ref(message.agent_id) }}/{{ item.attachment_id | urlencode }}?s={{ signature(message.agent_id, item.attachment_id) }}" alt="{{ item.name }}" loading="lazy"><figcaption><span>{{ m.icon("image") }}{{ item.name }}</span>{% if item.size_bytes is not none %}<span>{{ item.size_bytes | size }}</span>{% endif %}</figcaption></figure>
     {% else %}
     <div class="file">{{ m.icon("file") }}<span>{{ item.name }}</span>{% if item.size_bytes is not none %}<small>{{ item.size_bytes | size }}</small>{% endif %}</div>
     {% endif %}

@@ -20,6 +20,7 @@ class Sender(_Answer):
 
 class Preview(_Answer):
     message_id: str
+    direction: Literal["inbound", "outbound"]
     sender: Sender | None
     sender_kind: str
     at_ms: int
@@ -28,6 +29,8 @@ class Preview(_Answer):
 
 class Conversation(_Answer):
     thread_id: str
+    provider_thread_id: str
+    channel_identity: str | None
     name: str | None
     # the peer's, in a DM
     handle: str | None
@@ -73,6 +76,8 @@ class Attachment(_Answer):
 
 class Entry(_Answer):
     message_id: str
+    provider_message_id: str | None
+    edit_version: str | None
     seq: int
     direction: Literal["inbound", "outbound"]
     sender: Sender | None
@@ -91,6 +96,8 @@ class History(_Answer):
 
 class Hit(_Answer):
     message_id: str
+    provider_message_id: str | None
+    edit_version: str | None
     thread_id: str
     conversation: str | None
     kind: Literal["dm", "group"]

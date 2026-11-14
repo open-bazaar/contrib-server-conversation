@@ -121,3 +121,4 @@
 "chats.attention.none" = "Nothing needs you."
 "chats.all" = "All"
 "chats.failed.start" = "{{ agent }} failed to start on {{ computer }}"
+"chats.review.pending" = "Waiting for approval"

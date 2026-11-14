@@ -7,7 +7,8 @@ shows through the update bus, for agents the account may see."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+lazy import asyncio
 lazy from collections.abc import Mapping, Sequence
 lazy from datetime import datetime, timedelta
 lazy from time import time_ns
@@ -28,16 +29,18 @@ lazy from starlette.requests import Request
 lazy from starlette.responses import Response
 lazy from starlette.routing import Route
 
+from . import groups
+from .groups import Row, Source
 lazy from .images import Images
 lazy from .models import (
-    Conversation,
     Detail,
     Entry,
     Found,
     History,
     Hit,
-    Page,
+    Member,
     Reminder,
+    Sender,
 )
 lazy from .reader import PAGE, Away, Reader
 lazy from .service import Service
@@ -114,14 +117,6 @@ def failed(agent: Agent) -> bool:
 
 
 @dataclass(frozen=True, slots=True)
-class Row:
-    """A conversation in a list: the agent it is with, and how it is."""
-
-    agent: Agent
-    conversation: Conversation
-
-
-@dataclass(frozen=True, slots=True)
 class Opened:
     """One conversation as the pages show it: its agent and what it is
     about, its messages or the first of them while it waits, the reminders
@@ -138,6 +133,15 @@ class Opened:
     approve: bool
     update: bool
     around: str | None
+    sources: tuple[Source, ...]
+
+    @property
+    def grouped(self) -> bool:
+        return len(self.sources) > 1
+
+    @property
+    def key(self) -> str:
+        return Row(self.agent, self.detail.conversation).key
 
 
 class Views:
@@ -267,43 +271,22 @@ class Views:
         """A page of the agents' conversations newest first, read from each
         where it was left; how far each is read after it, and why some are
         not there."""
-        asked = [
-            agent for agent in agents if positions is None or agent.id in positions
+        sources = [
+            Source(agent, conversation)
+            for agent in agents
+            for conversation in self._reader.conversations(agent)
+            if conversation.review == review
         ]
-
-        async def read(agent: Agent) -> Page:
-            return Page.model_validate(
-                await self._reader.call(
-                    agent,
-                    "conversations",
-                    review,
-                    (positions or {}).get(agent.id, 0),
-                    PAGE,
-                )
-            )
-
-        pages, away = await self._reader.each(asked, read)
-        by_id = {agent.id: agent for agent in asked}
-        rows = sorted(
-            (
-                Row(by_id[agent_id], conversation)
-                for agent_id, page in pages.items()
-                for conversation in page.conversations
-            ),
-            key=lambda row: (
-                -row.conversation.last_activity_at_ms,
-                row.conversation.thread_id,
-            ),
-        )[:PAGE]
-        taken: dict[str, int] = {}
-        for row in rows:
-            taken[row.agent.id] = taken.get(row.agent.id, 0) + 1
-        after = {
-            agent_id: (positions or {}).get(agent_id, 0) + taken.get(agent_id, 0)
-            for agent_id, page in pages.items()
-            if taken.get(agent_id, 0) < len(page.conversations) or page.has_more
-        }
+        rows = groups.rows(sources, agents)
+        offset = max((positions or {}).values(), default=0)
+        after = {agents[0].id: offset + PAGE} if offset + PAGE < len(rows) else {}
+        rows = rows[offset : offset + PAGE]
         await self._server.refs.load([row.conversation.thread_id for row in rows])
+        away = [
+            missing
+            for agent in agents
+            if (missing := self._reader.away(agent)) is not None
+        ]
         return rows, after, away
 
     async def _searched(
@@ -321,52 +304,103 @@ class Views:
             return [], {}, [], 0
         sort = "time" if query.get("sort") == "time" else "relevance"
         within = await self._within(request)
-        if within is not None:
-            agents = [agent for agent in agents if agent.id == within[0]]
-        asked = [
-            agent for agent in agents if positions is None or agent.id in positions
+        sources = [
+            Source(agent, conversation)
+            for agent in agents
+            for conversation in self._reader.conversations(agent)
+        ]
+        selected = next(
+            (
+                source
+                for source in sources
+                if within == (source.agent.id, source.conversation.thread_id)
+            ),
+            None,
+        )
+        peers = [
+            source
+            for source in sources
+            if selected is not None and groups.group(source) == groups.group(selected)
         ]
         after_ms = await self._since(request)
 
-        async def read(agent: Agent) -> Found:
-            return Found.model_validate(
-                await self._reader.call(
-                    agent,
-                    "search",
-                    query.get("q", ""),
-                    sort,
-                    thread_id=None if within is None else within[1],
-                    sender=query.get("from") or None,
-                    after_ms=after_ms,
-                    offset=(positions or {}).get(agent.id, 0),
-                    limit=HITS,
-                )
+        async def read(agent: Agent) -> list[Hit]:
+            found: list[Hit] = []
+            threads = (
+                [
+                    source.conversation.thread_id
+                    for source in peers
+                    if source.agent.id == agent.id
+                ]
+                if within is not None
+                else [None]
             )
+            for thread_id in threads:
+                offset = 0
+                while True:
+                    page = Found.model_validate(
+                        await self._reader.call(
+                            agent,
+                            "search",
+                            query.get("q", ""),
+                            sort,
+                            thread_id=thread_id,
+                            sender=query.get("from") or None,
+                            after_ms=after_ms,
+                            offset=offset,
+                            limit=HITS,
+                        )
+                    )
+                    found.extend(page.messages)
+                    if not page.has_more:
+                        break
+                    offset += len(page.messages)
+            return found
 
-        found, away = await self._reader.each(asked, read)
-        by_id = {agent.id: agent for agent in asked}
+        answers, away = await self._reader.each(agents, read)
+        by_agent = {agent.id: agent for agent in agents}
+        by_thread = {
+            (source.agent.id, source.conversation.thread_id): source
+            for source in sources
+        }
+        known = groups.identities(agents, sources)
+        unique: dict[tuple[tuple[str, ...], str, str], tuple[Agent, Hit]] = {}
+        for agent_id, hits in answers.items():
+            agent = by_agent[agent_id]
+            for hit in hits:
+                source = by_thread[(agent_id, hit.thread_id)]
+                key = (
+                    groups.group(source),
+                    hit.provider_message_id or f"{agent_id}:{hit.message_id}",
+                    hit.edit_version or "",
+                )
+                previous = unique.get(key)
+                if previous is None or (
+                    hit.direction == "outbound" and previous[1].direction != "outbound"
+                ):
+                    unique[key] = (
+                        agent,
+                        hit.model_copy(
+                            update={
+                                "sender": groups.who(
+                                    source, hit.sender, hit.direction, known
+                                )[0]
+                            }
+                        ),
+                    )
         hits = sorted(
-            (
-                (by_id[agent_id], hit)
-                for agent_id, page in found.items()
-                for hit in page.messages
-            ),
+            unique.values(),
             key=lambda pair: (
                 (-pair[1].at_ms,)
                 if sort == "time"
                 else (-pair[1].score, -pair[1].at_ms)
             ),
-        )[:HITS]
-        taken: dict[str, int] = {}
-        for agent, _ in hits:
-            taken[agent.id] = taken.get(agent.id, 0) + 1
-        after = {
-            agent_id: (positions or {}).get(agent_id, 0) + taken.get(agent_id, 0)
-            for agent_id, page in found.items()
-            if taken.get(agent_id, 0) < len(page.messages) or page.has_more
-        }
-        await self._server.refs.load([hit.thread_id for _, hit in hits])
-        return hits, after, away, sum(page.total for page in found.values())
+        )
+        offset = max((positions or {}).values(), default=0)
+        after = {agents[0].id: offset + HITS} if offset + HITS < len(hits) else {}
+        shown = hits[offset : offset + HITS]
+        await self._server.refs.load([hit.thread_id for _, hit in shown])
+        return shown, after, away, len(hits)
 
     async def _since(self, request: Request) -> int | None:
         """When the search's time filter starts: today on the viewer's clock,
@@ -417,15 +451,35 @@ class Views:
         account: Account = request.state.account
         query = request.query_params
         tab = "contacts" if query.get("tab") == "contacts" else "chats"
-        counts = await self._reader.counts(account, scoped, wait=True)
+        await self._reader.counts(account, scoped, wait=True)
         shown: dict[str, Any] = {
             "tab": tab,
             "agents": agents,
             "scoped": scoped,
             "chosen": query.get("agent", ""),
             "kept": self._kept(request),
-            "total": sum(counted.total for counted in counts.values()),
-            "pending": sum(counted.pending.total for counted in counts.values()),
+            "total": len(
+                groups.rows(
+                    [
+                        Source(agent, conversation)
+                        for agent in scoped
+                        for conversation in self._reader.conversations(agent)
+                        if conversation.review == "approved"
+                    ],
+                    agents,
+                )
+            ),
+            "pending": len(
+                groups.rows(
+                    [
+                        Source(agent, conversation)
+                        for agent in scoped
+                        for conversation in self._reader.conversations(agent)
+                        if conversation.review == "pending"
+                    ],
+                    agents,
+                )
+            ),
             "query": query.get("q", ""),
         }
         if "q" in query:
@@ -499,7 +553,7 @@ class Views:
             if not member.is_self and member.sender is not None and member.sender.id
         ]
 
-    async def _open(
+    async def _single(
         self, request: Request, agent: Agent, thread_id: str, around: str | None
     ) -> Opened | None:
         """The conversation as the pages show it; nothing while its agent's
@@ -558,6 +612,245 @@ class Views:
             approve=await self._can(account, agent, APPROVE),
             update=await self._can(account, agent, UPDATE),
             around=around,
+            sources=(Source(agent, detail.conversation),),
+        )
+
+    async def _sources(
+        self, request: Request, source: Source
+    ) -> tuple[list[Agent], tuple[Source, ...]]:
+        agents, scoped = await self._scoped(request)
+        await self._reader.counts(request.state.account, scoped, wait=True)
+        key = groups.group(source)
+        sources = [
+            Source(agent, conversation)
+            for agent in scoped
+            for conversation in self._reader.conversations(agent)
+            if groups.group(Source(agent, conversation)) == key
+        ]
+        if all(
+            item.agent.id != source.agent.id
+            or item.conversation.thread_id != source.conversation.thread_id
+            for item in sources
+        ):
+            sources.append(source)
+        await self._server.refs.load([item.conversation.thread_id for item in sources])
+        return agents, tuple(sources)
+
+    async def _timeline(
+        self,
+        sources: Sequence[Source],
+        agents: Sequence[Agent],
+        position: tuple[int, str, str] | None = None,
+        side: Literal["before", "after", "around"] = "around",
+        limit: int = SHOWN,
+    ) -> History:
+        async def read(source: Source) -> tuple[Source, History] | None:
+            if self._reader.away(source.agent) is not None:
+                return None
+            try:
+                if source.conversation.review == "pending":
+                    history = History.model_validate(
+                        await self._reader.call(
+                            source.agent,
+                            "history",
+                            source.conversation.thread_id,
+                            limit=1,
+                        )
+                    )
+                    if position is not None:
+                        history = history.model_copy(
+                            update={
+                                "messages": tuple(
+                                    message
+                                    for message in history.messages
+                                    if (
+                                        groups.position(message) < position
+                                        if side == "before"
+                                        else groups.position(message) > position
+                                        if side == "after"
+                                        else True
+                                    )
+                                )
+                            }
+                        )
+                    return source, history.model_copy(
+                        update={"has_before": False, "has_after": False}
+                    )
+                return source, History.model_validate(
+                    await self._reader.call(
+                        source.agent,
+                        "timeline",
+                        source.conversation.thread_id,
+                        position=position,
+                        side=side,
+                        limit=limit,
+                    )
+                )
+            except RemoteError, TimeoutError:
+                return None
+
+        answers = [
+            answer
+            for answer in await asyncio.gather(*(read(source) for source in sources))
+            if answer is not None
+        ]
+        messages = groups.messages(
+            [
+                (source, entry)
+                for source, history in answers
+                for entry in history.messages
+            ],
+            agents,
+            sources,
+            grouped=True,
+        )
+        if side == "before" or position is None:
+            start = max(0, len(messages) - limit)
+        elif side == "after":
+            start = 0
+        else:
+            count = sum(groups.position(message) < position for message in messages)
+            start = max(0, min(count - limit // 2, len(messages) - limit))
+        return History(
+            messages=tuple(messages[start : start + limit]),
+            has_before=start > 0 or any(history.has_before for _, history in answers),
+            has_after=start + limit < len(messages)
+            or any(history.has_after for _, history in answers),
+        )
+
+    async def _open(
+        self, request: Request, agent: Agent, thread_id: str, around: str | None
+    ) -> Opened | None:
+        opened = await self._single(request, agent, thread_id, around)
+        if opened is None:
+            return None
+        agents, sources = await self._sources(request, opened.sources[0])
+        if len(sources) == 1:
+            return replace(
+                opened,
+                history=opened.history.model_copy(
+                    update={
+                        "messages": tuple(
+                            groups.messages(
+                                [
+                                    (sources[0], message)
+                                    for message in opened.history.messages
+                                ],
+                                agents,
+                                sources,
+                                grouped=False,
+                            )
+                        )
+                    }
+                ),
+            )
+        anchor = next(
+            (
+                message
+                for message in opened.history.messages
+                if message.message_id == around
+            ),
+            None,
+        )
+        history = await self._timeline(
+            sources, agents, groups.position(anchor) if anchor else None
+        )
+        details: list[tuple[Source, Detail]] = []
+        receipts: dict[str, Receipt] = {}
+        working: list[Turn] = []
+        reminders: list[Reminder] = []
+        for source in sources:
+            if self._reader.away(source.agent) is not None:
+                continue
+            try:
+                detail = Detail.model_validate(
+                    await self._reader.call(
+                        source.agent, "conversation", source.conversation.thread_id
+                    )
+                )
+                details.append((source, detail))
+                reminders.extend(
+                    _REMINDERS.validate_python(
+                        await self._reader.call(
+                            source.agent, "reminders", source.conversation.thread_id
+                        )
+                    )
+                )
+            except RemoteError, TimeoutError:
+                continue
+            messages = [
+                message
+                for message in history.messages
+                if isinstance(message, groups.Said)
+                and message.agent_id == source.agent.id
+            ]
+            receipts.update(
+                await self._receipts(request.state.account, source.agent, messages)
+            )
+            working.extend(
+                await self._activity.working(
+                    request.state.account,
+                    agent_id=source.agent.id,
+                    thread_id=source.conversation.thread_id,
+                )
+            )
+        known = groups.identities(agents, sources)
+        members: dict[str, Member] = {}
+        for source, detail in details:
+            for member in detail.members:
+                sender, owner = groups.who(
+                    source,
+                    member.sender,
+                    "outbound" if member.is_self else "inbound",
+                    known,
+                )
+                if sender is not None:
+                    key = sender.id or sender.name or ""
+                    members[key] = Member(
+                        sender=sender,
+                        sender_kind="agent" if owner else member.sender_kind,
+                        is_self=False,
+                    )
+        for source in sources:
+            members[source.agent.id] = Member(
+                sender=Sender(
+                    id=source.agent.id,
+                    name=source.agent.name,
+                    display_name=source.agent.name,
+                ),
+                sender_kind="agent",
+                is_self=False,
+            )
+        conversation = groups.rows(sources, agents)[0].conversation.model_copy(
+            update={
+                "thread_id": opened.detail.conversation.thread_id,
+                "provider_thread_id": opened.detail.conversation.provider_thread_id,
+                "channel_identity": opened.detail.conversation.channel_identity,
+                "member_count": len(members),
+            }
+        )
+        return Opened(
+            agent=opened.agent,
+            detail=Detail(
+                conversation=conversation,
+                created_at_ms=min(
+                    [
+                        opened.detail.created_at_ms,
+                        *(detail.created_at_ms for _, detail in details),
+                    ]
+                ),
+                message_count=opened.detail.message_count,
+                members=tuple(members.values()),
+            ),
+            history=history,
+            reminders=tuple(reminders),
+            receipts=receipts,
+            working=working,
+            reply=opened.reply,
+            approve=opened.approve,
+            update=opened.update,
+            around=groups.message_id(opened.sources[0], anchor) if anchor else around,
+            sources=sources,
         )
 
     async def _receipts(
@@ -567,7 +860,9 @@ class Views:
             account,
             agent.id,
             [
-                message.message_id
+                message.source_message_id
+                if isinstance(message, groups.Said)
+                else message.message_id
                 for message in messages
                 if message.direction == "outbound"
             ],
@@ -647,6 +942,52 @@ class Views:
         query = request.query_params
         anchor = query.get("before") or query.get("after") or ""
         older = "before" in query
+        detail = Detail.model_validate(
+            await self._reader.call(agent, "conversation", thread_id)
+        )
+        agents, sources = await self._sources(
+            request, Source(agent, detail.conversation)
+        )
+        if len(sources) > 1:
+            try:
+                position = groups.located(anchor)
+            except ValueError:
+                raise HTTPException(status_code=404) from None
+            history = await self._timeline(
+                sources, agents, position, "before" if older else "after", FURTHER
+            )
+            receipts: dict[str, Receipt] = {}
+            working: list[Turn] = []
+            for source in sources:
+                messages = [
+                    message
+                    for message in history.messages
+                    if isinstance(message, groups.Said)
+                    and message.agent_id == source.agent.id
+                ]
+                receipts.update(await self._receipts(account, source.agent, messages))
+                if not older:
+                    working.extend(
+                        await self._activity.working(
+                            account,
+                            agent_id=source.agent.id,
+                            thread_id=source.conversation.thread_id,
+                        )
+                    )
+            return await self._pages.render(
+                request,
+                "chats/more.html",
+                agent=agent,
+                thread_id=thread_id,
+                messages=history.messages,
+                older=older,
+                more=history.has_before if older else history.has_after,
+                receipts=receipts,
+                working=working,
+                scope=request.query_params.get("agent", ""),
+                sources=sources,
+                now_ms=time_ns() // 1_000_000,
+            )
         try:
             window = History.model_validate(
                 await self._reader.call(
@@ -674,6 +1015,12 @@ class Views:
             for message in window.messages
             if (message.seq < seq if older else message.seq > seq)
         ]
+        messages = groups.messages(
+            [(Source(agent, detail.conversation), message) for message in messages],
+            agents,
+            sources,
+            grouped=False,
+        )
         return await self._pages.render(
             request,
             "chats/more.html",
@@ -683,6 +1030,8 @@ class Views:
             older=older,
             more=window.has_before if older else window.has_after,
             receipts=await self._receipts(account, agent, messages),
+            sources=sources,
+            scope=request.query_params.get("agent", ""),
             working=[]
             if older
             else await self._activity.working(
@@ -694,6 +1043,7 @@ class Views:
     async def _rows(self, request: Request) -> Response:
         """The next page of a list, from where each agent was left."""
         _, scoped = await self._scoped(request)
+        await self._reader.counts(request.state.account, scoped, wait=True)
         positions = await self._read_positions(request, scoped)
         review = (
             "pending" if request.query_params.get("tab") == "contacts" else "approved"
@@ -1035,17 +1385,41 @@ class Views:
         agent = None if found is None else await self._agents.agent(account, found[0])
         if found is None or agent is None:
             return None
-        return {
-            "cursor": await self._activity.cursor(
-                account, agent_id=agent.id, thread_id=found[1], messages=True
+        agents = list(await self._agents.agents(account))
+        await self._reader.counts(account, agents, wait=True)
+        source = next(
+            (
+                Source(agent, conversation)
+                for conversation in self._reader.conversations(agent)
+                if conversation.thread_id == found[1]
             ),
-            "running": [
-                turn.turn_id
-                for turn in await self._activity.working(
-                    account, agent_id=agent.id, thread_id=found[1]
-                )
-            ],
-        }
+            None,
+        )
+        if source is None:
+            return None
+        sources = [
+            Source(owner, conversation)
+            for owner in agents
+            for conversation in self._reader.conversations(owner)
+            if groups.group(Source(owner, conversation)) == groups.group(source)
+        ]
+        cursors = [
+            await self._activity.cursor(
+                account,
+                agent_id=peer.agent.id,
+                thread_id=peer.conversation.thread_id,
+                messages=True,
+            )
+            for peer in sources
+        ]
+        working = [
+            turn.turn_id
+            for peer in sources
+            for turn in await self._activity.working(
+                account, agent_id=peer.agent.id, thread_id=peer.conversation.thread_id
+            )
+        ]
+        return {"cursor": max(cursors, default=0), "running": sorted(working)}
 
     async def tallied(
         self, account: Account, scope: Mapping[str, str]

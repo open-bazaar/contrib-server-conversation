@@ -121,3 +121,4 @@
 "chats.attention.none" = "没有需要处理的事。"
 "chats.all" = "全部"
 "chats.failed.start" = "{{ agent }} 在 {{ computer }} 上启动失败"
+"chats.review.pending" = "待审批"
