@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.15"
 
 [options]
@@ -147,6 +147,34 @@ node = [
 ]
 
 [[package]]
+name = "bazaar-contrib-agent"
+version = "0.3.0rc33"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bazaar-contrib-audit" },
+    { name = "bazaar-contrib-channel" },
+    { name = "bazaar-contrib-collaboration" },
+    { name = "bazaar-contrib-config" },
+    { name = "bazaar-contrib-harness" },
+    { name = "bazaar-contrib-invoke" },
+    { name = "bazaar-contrib-legacy-node-migrations" },
+    { name = "bazaar-contrib-messages" },
+    { name = "bazaar-contrib-reminder" },
+    { name = "bazaar-contrib-schema" },
+    { name = "bazaar-contrib-sidecar" },
+    { name = "bazaar-contrib-storage" },
+    { name = "bazaar-contrib-timer" },
+    { name = "bazaar-core" },
+    { name = "click" },
+    { name = "jinja2" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/34/59/3e94553b7eb29eb5957b0fa7f2a462f80919a2fd548d9217423311155559/bazaar_contrib_agent-0.3.0rc33.tar.gz", hash = "sha256:cf85a20728ca5ee0d327b8802454975256860cab91d92fdf57efe3fa34e0aea1", size = 68508, upload-time = "2026-11-16T03:03:10.095Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0e/0f/d1a779e9c4046bc94bb08a40884818069b2a5b066332b8b14265624008ae/bazaar_contrib_agent-0.3.0rc33-py3-none-any.whl", hash = "sha256:dbabf0b47f66ace160aac811f6da9947870543952e557dc5d602fb5843735a3c", size = 87876, upload-time = "2026-11-16T03:03:09.16Z" },
+]
+
+[[package]]
 name = "bazaar-contrib-audit"
 version = "0.3.0rc26"
 source = { registry = "https://pypi.org/simple" }
@@ -161,7 +189,7 @@ wheels = [
 
 [[package]]
 name = "bazaar-contrib-channel"
-version = "0.3.0rc26"
+version = "0.3.0rc33"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bazaar-contrib-harness" },
@@ -169,9 +197,30 @@ dependencies = [
     { name = "bazaar-core" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fa/f8/4221b666195c9bf1245eb812395f9f84d60feacb8671e62db922372018fe/bazaar_contrib_channel-0.3.0rc26.tar.gz", hash = "sha256:a7da06953b8f4a9126bee75873b60f653f3890e4887f66ae547d689986974b01", size = 11934, upload-time = "2026-11-10T09:28:55.857Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/22/c4/fb5bcfecf78a9a2c6f8adce76814fc112684dca40155e9ec84971bdc552a/bazaar_contrib_channel-0.3.0rc33.tar.gz", hash = "sha256:31a233b0388a2f639824322ec9a03d64e98d05ce979f4d32d4a6a42740a67c49", size = 12155, upload-time = "2026-11-16T03:02:44.803Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b9/bc/f197c5fb41451516eeacb12088763082a1dc47331a00b31e21e638d09f46/bazaar_contrib_channel-0.3.0rc26-py3-none-any.whl", hash = "sha256:7e487261f912d64ea6ce9f0c9c97125445add80339114d7e9c59c65055376cf0", size = 15383, upload-time = "2026-11-10T09:28:55.003Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/a6/6687e39df0fff693e8bde1dbf3e50b9ea5ed2c1291bc3609e67c466a5c55/bazaar_contrib_channel-0.3.0rc33-py3-none-any.whl", hash = "sha256:a37f99e7023389a906763f011a9f406c3a9b73bf06b60c310b29308175ab5a3c", size = 15663, upload-time = "2026-11-16T03:02:43.729Z" },
+]
+
+[[package]]
+name = "bazaar-contrib-collaboration"
+version = "0.3.0rc33"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bazaar-contrib-audit" },
+    { name = "bazaar-contrib-channel" },
+    { name = "bazaar-contrib-legacy-node-migrations" },
+    { name = "bazaar-contrib-messages" },
+    { name = "bazaar-contrib-schema" },
+    { name = "bazaar-contrib-sidecar" },
+    { name = "bazaar-contrib-storage" },
+    { name = "bazaar-contrib-timer" },
+    { name = "bazaar-core" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8d/e0/a702e3f9115daa7eab8dcf4f5abd4231319eda6bbd1fbf81f38f6c9de12a/bazaar_contrib_collaboration-0.3.0rc33.tar.gz", hash = "sha256:cccd6992f88f60ce9d639f79e6721019408a8eb74bb524a9ab8b89636afd7a86", size = 10722, upload-time = "2026-11-16T03:03:03.078Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3e/0e/038fc96acb6e757bd7a606232716304abdf66765e47eb6c793fdcca2acf3/bazaar_contrib_collaboration-0.3.0rc33-py3-none-any.whl", hash = "sha256:68c9fdb269bf431bd25aa8ae82de4c9f6af60d20a9271386c1c1ec14376a7993", size = 13882, upload-time = "2026-11-16T03:03:02.211Z" },
 ]
 
 [[package]]
@@ -540,7 +589,7 @@ dev = [
     { name = "bazaar-compute", extras = ["node"], specifier = "~=0.3.0rc26" },
     { name = "bazaar-contrib-sqlite", specifier = "~=0.3.0rc1" },
     { name = "bazaar-contrib-starlink", specifier = "~=0.3.0rc2" },
-    { name = "bazaar-contrib-starlink-conversation", specifier = "~=0.3.0rc2" },
+    { name = "bazaar-contrib-starlink-conversation", specifier = "~=0.3.0rc3" },
     { name = "bazaar-contrib-timer", specifier = "~=0.3.0rc26" },
     { name = "blockbuster", specifier = ">=1.5.29,<1.6" },
     { name = "httpx", specifier = ">=0.28.0,<1" },
@@ -652,18 +701,20 @@ wheels = [
 
 [[package]]
 name = "bazaar-contrib-starlink-conversation"
-version = "0.3.0rc2"
+version = "0.3.0rc3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "bazaar-contrib-agent" },
+    { name = "bazaar-contrib-channel" },
     { name = "bazaar-contrib-messages" },
     { name = "bazaar-contrib-reminder" },
     { name = "bazaar-contrib-sidecar" },
     { name = "bazaar-contrib-storage" },
     { name = "bazaar-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/16/1f/ef8fdac9b6d055e9bff815c2fc60dc55a2004876a0b427cfea60c256900c/bazaar_contrib_starlink_conversation-0.3.0rc2.tar.gz", hash = "sha256:07c42a2982905b0f9eea35c0c8147352d8b0c2311b613a1123cb1010de66fe5c", size = 14560, upload-time = "2026-11-10T01:38:50.968Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/d5/2d3f17afb70e74ece69113844aa32cde8b45d40033afa383b455a5acc535/bazaar_contrib_starlink_conversation-0.3.0rc3.tar.gz", hash = "sha256:09827ff04b5e01af85a54a8481725c59eddcdf8d74821b3955c018ae6bef6b9e", size = 15530, upload-time = "2026-11-16T07:27:37.996Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/75/75/f2bbc98387ac42e60597be9e081eda604511860d3a93c97eb618a4258819/bazaar_contrib_starlink_conversation-0.3.0rc2-py3-none-any.whl", hash = "sha256:16b79b79ca29eb04d57441857a8d85bea1ff99c0b67697781679779c571fe53a", size = 16940, upload-time = "2026-11-10T01:38:49.87Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/49/4b2102b9e87a5166daabba5a7b919e669e0bccecf0f4bb8b847ccfeedf2c/bazaar_contrib_starlink_conversation-0.3.0rc3-py3-none-any.whl", hash = "sha256:6b713e497b8da590011ed47947bf1ab984fc69b68dd3f956d760475fbc66f93f", size = 18046, upload-time = "2026-11-16T07:27:37.1Z" },
 ]
 
 [[package]]
